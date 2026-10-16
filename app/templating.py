@@ -32,7 +32,7 @@ templates.env.globals["site_name"] = settings.site_name
 templates.env.globals["limits"] = settings
 templates.env.globals["report_reasons"] = REPORT_REASONS
 
-FLASH_COOKIE = "kawara_flash"
+FLASH_COOKIE = "nextech_flash"
 
 # 画面に出すお知らせは、コードで管理する（自由文をCookieに入れない）
 FLASH_MESSAGES: dict[str, tuple[str, str]] = {

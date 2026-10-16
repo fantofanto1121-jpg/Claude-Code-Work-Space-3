@@ -13,7 +13,7 @@ import httpx
 
 from app.config import settings
 
-logger = logging.getLogger("kawara.mail")
+logger = logging.getLogger("nextech.mail")
 
 
 def send_email(to: str, subject: str, text_body: str) -> bool:

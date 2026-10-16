@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-TEST_DB = Path(tempfile.gettempdir()) / "kawara_test.db"
+TEST_DB = Path(tempfile.gettempdir()) / "nextech_test.db"
 if TEST_DB.exists():
     TEST_DB.unlink()
 
@@ -21,7 +21,7 @@ os.environ["APP_ENV"] = "development"
 os.environ["RATE_LIMIT_ENABLED"] = "false"  # 個別のテストで一時的に有効化する
 os.environ["REQUIRE_EMAIL_VERIFICATION"] = "false"
 os.environ["ADMIN_EMAILS"] = "boss@example.com"
-os.environ["SITE_NAME"] = "カワラ版"
+os.environ["SITE_NAME"] = "NEXTECH"
 
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import select  # noqa: E402
@@ -73,7 +73,7 @@ def unique_email(prefix: str = "user") -> str:
 def csrf(client: TestClient) -> str:
     """フォーム送信に必要な CSRF トークンを取得する。"""
     client.get("/")
-    return client.cookies.get("kawara_csrf", "")
+    return client.cookies.get("nextech_csrf", "")
 
 
 def register(client: TestClient, email: str | None = None, name: str = "テスト太郎",
@@ -132,7 +132,7 @@ def reply(client: TestClient, thread_id: int, body: str, reply_to: str = "") -> 
 import logging  # noqa: E402
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("kawara.mail").setLevel(logging.ERROR)
+logging.getLogger("nextech.mail").setLevel(logging.ERROR)
 
 
 ADMIN_EMAIL = "boss@example.com"

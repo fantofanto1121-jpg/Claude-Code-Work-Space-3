@@ -3,11 +3,14 @@
 # 手順の詳細は docs/DEPLOY.md を参照してください。
 services:
   - type: web
-    name: kawaraban
+    # 注意: この名前がそのまま公開URL（https://<name>.onrender.com）になります。
+    #       Render全体で世界に1つだけなので、他の人と重複する場合は変更が必要です。
+    name: nextech-bbs
     runtime: python
     plan: free
     region: singapore          # 日本から最も近いリージョン
-    branch: main
+    # このリポジトリの既定ブランチ。別のブランチで運用する場合は書き換える。
+    branch: claude/gifted-galileo-f3ce46
     buildCommand: "pip install -r requirements.txt"
     # 起動前に init_db.py を実行して、テーブルと初期カテゴリーを用意する。
     # 注意: 無料プランでこれが動くかは未確認です。動かない場合は、自分のパソコンから
@@ -28,9 +31,9 @@ services:
       - key: DATABASE_URL
         sync: false             # Neon の接続URLを手入力（画面から設定）
       - key: BASE_URL
-        sync: false             # 例: https://kawaraban.onrender.com
+        sync: false             # サービス作成後に表示される実際のURLを入力する
       - key: SITE_NAME
-        value: カワラ版
+        value: NEXTECH
       - key: ADMIN_EMAILS
         sync: false             # 自分のメールアドレス
       - key: RESEND_API_KEY

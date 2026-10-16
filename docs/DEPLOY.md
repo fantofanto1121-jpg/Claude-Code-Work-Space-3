@@ -26,7 +26,7 @@
 
    | 項目 | 設定値 |
    |------|--------|
-   | Project name | `kawaraban`（任意） |
+   | Project name | `nextech-bbs`（任意） |
    | Postgres version | 最新のまま |
    | Region | **Asia Pacific (Singapore)** ← 日本から最も近い |
 
@@ -55,7 +55,7 @@
 ### まだリポジトリが無い場合
 
 1. <https://github.com/new> でリポジトリを作成
-   - Repository name: `kawaraban`（任意）
+   - Repository name: `nextech-bbs`（任意）
    - **Public / Private どちらでも構いません**
    - 「Add a README file」には**チェックを入れない**（既にあるため）
 
@@ -64,9 +64,9 @@
    ```bash
    git init
    git add .
-   git commit -m "カワラ版 掲示板の初期実装"
+   git commit -m "NEXTECH 掲示板の初期実装"
    git branch -M main
-   git remote add origin https://github.com/あなたのID/kawaraban.git
+   git remote add origin https://github.com/あなたのID/nextech-bbs.git
    git push -u origin main
    ```
 
@@ -90,14 +90,15 @@ git ls-files | grep -E "^\.env$"
 
 1. <https://render.com> を開き、**GitHub アカウントでサインアップ**
 2. ダッシュボードで **New +** → **Web Service**
-3. **Build and deploy from a Git repository** を選び、`kawaraban` リポジトリを接続
+3. **Build and deploy from a Git repository** を選び、自分のリポジトリ
+   （例: `Claude-Code-Work-Space-3`）を接続する
 4. 設定画面で次のように入力します
 
    | 項目 | 設定値 |
    |------|--------|
-   | Name | `kawaraban`（これがURLになります） |
+   | Name | `nextech-bbs` など **世界で重複しない名前**（これがURLになります） |
    | Region | **Singapore** |
-   | Branch | `main` |
+   | Branch | `claude/gifted-galileo-f3ce46`（リポジトリの既定ブランチ。通常は自動で選ばれます） |
    | Runtime | `Python 3` |
    | Build Command | `pip install -r requirements.txt` |
    | Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers` |
@@ -114,16 +115,22 @@ git ls-files | grep -E "^\.env$"
    | `DATABASE_URL` | ①でメモした `postgresql+psycopg://...` の文字列 |
    | `APP_ENV` | `production` |
    | `TRUST_PROXY_HEADERS` | `true` |
-   | `BASE_URL` | `https://kawaraban.onrender.com`（自分のURLに合わせる） |
-   | `SITE_NAME` | `カワラ版`（好きな名前に変更可） |
+   | `BASE_URL` | 仮に `https://example.onrender.com`。**作成後に実際のURLへ必ず直す**（下記参照） |
+   | `SITE_NAME` | `NEXTECH`（好きな名前に変更可） |
    | `ADMIN_EMAILS` | 自分のメールアドレス |
    | `PYTHON_VERSION` | `3.12.7` |
    | `REQUIRE_EMAIL_VERIFICATION` | `false` |
 
    メール送信を使う場合のみ、追加で `RESEND_API_KEY` と `MAIL_FROM` を設定します。
 
-   > `BASE_URL` はサービス作成後でないと確定しません。
-   > いったん仮の値で作成し、URLが決まってから修正して再デプロイしてください。
+   > **重要: 公開URLを事前に予測しないでください。**
+   > `〇〇.onrender.com` のサブドメインは **Render全体で世界に1つだけ**です。
+   > 希望の名前が他の人に使われていると別の名前になり、予測したURLを開くと
+   > **まったく無関係な他人のサイトが表示されます**。
+   >
+   > 正しいURLは、サービス作成後に **Renderのサービス画面の上部に表示されるもの**だけです。
+   > それを確認してから `BASE_URL` を書き換え、**Manual Deploy** で再デプロイしてください。
+   > （`BASE_URL` が違うと、パスワード再設定メールのリンクが壊れます）
 
 6. **Create Web Service** を押します。初回のビルドに3〜5分かかります。
 

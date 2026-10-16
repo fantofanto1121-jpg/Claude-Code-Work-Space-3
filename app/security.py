@@ -18,15 +18,15 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from app.config import settings
 
-SESSION_COOKIE = "kawara_session"
-CSRF_COOKIE = "kawara_csrf"
+SESSION_COOKIE = "nextech_session"
+CSRF_COOKIE = "nextech_csrf"
 CSRF_FIELD = "csrf_token"
 
 # Argon2id のパラメータ。無料枠の小さいサーバーでも現実的な値にしている。
 _hasher = PasswordHasher(time_cost=2, memory_cost=19_456, parallelism=1, hash_len=32, salt_len=16)
 
-_session_serializer = URLSafeTimedSerializer(settings.secret_key, salt="kawara.session.v1")
-_csrf_serializer = URLSafeTimedSerializer(settings.secret_key, salt="kawara.csrf.v1")
+_session_serializer = URLSafeTimedSerializer(settings.secret_key, salt="nextech.session.v1")
+_csrf_serializer = URLSafeTimedSerializer(settings.secret_key, salt="nextech.csrf.v1")
 
 
 # ------------------------------------------------------------------

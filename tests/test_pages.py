@@ -5,7 +5,7 @@ from tests.conftest import create_thread, login, register
 def test_top_page(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "カワラ版" in response.text
+    assert "NEXTECH" in response.text
     assert "カテゴリーから探す" in response.text
 
 

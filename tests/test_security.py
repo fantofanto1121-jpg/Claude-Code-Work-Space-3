@@ -127,7 +127,7 @@ def test_session_cookie_is_httponly(client):
         follow_redirects=False,
     )
     raw = response.headers.get("set-cookie", "")
-    assert "kawara_session" in raw
+    assert "nextech_session" in raw
     assert "HttpOnly" in raw
     assert "SameSite=lax" in raw or "samesite=lax" in raw.lower()
 

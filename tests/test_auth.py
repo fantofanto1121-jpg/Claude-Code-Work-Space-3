@@ -143,7 +143,7 @@ def test_logout_clears_session(client):
 def test_password_change_invalidates_other_sessions(client):
     """パスワード変更で session_version が上がり、古いCookieが無効になること。"""
     email = register(client)
-    old_cookie = client.cookies.get("kawara_session")
+    old_cookie = client.cookies.get("nextech_session")
 
     response = client.post(
         "/mypage/password",
@@ -158,7 +158,7 @@ def test_password_change_invalidates_other_sessions(client):
     assert response.status_code == 303
 
     client.cookies.clear()
-    client.cookies.set("kawara_session", old_cookie)
+    client.cookies.set("nextech_session", old_cookie)
     assert client.get("/mypage", follow_redirects=False).status_code == 303
 
     client.cookies.clear()

@@ -35,7 +35,7 @@ def _csv(name: str) -> list[str]:
 class Settings:
     # --- 実行環境 ---
     app_env: str = os.getenv("APP_ENV", "development").strip().lower()
-    site_name: str = os.getenv("SITE_NAME", "カワラ版").strip() or "カワラ版"
+    site_name: str = os.getenv("SITE_NAME", "NEXTECH").strip() or "NEXTECH"
     base_url: str = os.getenv("BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 
     # --- セキュリティ ---
