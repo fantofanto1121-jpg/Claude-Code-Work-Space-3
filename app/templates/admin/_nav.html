@@ -1,0 +1,7 @@
+<nav class="tabs" aria-label="管理メニュー">
+  <a class="tabs__item {% if active == 'home' %}is-active{% endif %}" href="/admin">ダッシュボード</a>
+  <a class="tabs__item {% if active == 'reports' %}is-active{% endif %}" href="/admin/reports">通報</a>
+  <a class="tabs__item {% if active == 'threads' %}is-active{% endif %}" href="/admin/threads">スレッド</a>
+  <a class="tabs__item {% if active == 'users' %}is-active{% endif %}" href="/admin/users">利用者</a>
+  <a class="tabs__item {% if active == 'logs' %}is-active{% endif %}" href="/admin/logs">操作履歴</a>
+</nav>

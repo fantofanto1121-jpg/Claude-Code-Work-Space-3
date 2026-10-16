@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}管理画面 | {{ site_name }}{% endblock %}
+{% block container_class %}container--wide{% endblock %}
+{% block content %}
+<div class="stack">
+  <div class="row row--between row--wrap">
+    <div>
+      <h1 class="page-title">管理画面</h1>
+      <p class="page-lede">{{ icon.shield('icon icon--sm') }} 管理者としてログイン中: {{ current_user.display_name }}</p>
+    </div>
+  </div>
+  {% with active = 'home' %}{% include "admin/_nav.html" %}{% endwith %}
+
+  <div class="stat-grid">
+    <div class="stat-tile {% if stats.open_reports %}stat-tile--alert{% endif %}">
+      <div class="stat-tile__label">未対応の通報</div>
+      <div class="stat-tile__value">{{ stats.open_reports }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile__label">会員数</div>
+      <div class="stat-tile__value">{{ stats.users }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile__label">スレッド数</div>
+      <div class="stat-tile__value">{{ stats.threads }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile__label">投稿数</div>
+      <div class="stat-tile__value">{{ stats.posts }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile__label">制限中の利用者</div>
+      <div class="stat-tile__value">{{ stats.banned }}</div>
+    </div>
+  </div>
+
+  {% if stats.open_reports %}
+    <div class="notice notice--warn">
+      <span class="notice__label">要対応</span>
+      <span>未対応の通報が {{ stats.open_reports }} 件あります。<a href="/admin/reports">通報一覧を確認する</a></span>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>最近の管理操作</h2>
+      <div class="spacer"></div>
+      <a class="btn btn--ghost btn--sm" href="/admin/logs">すべて見る</a>
+    </div>
+    {% if recent_actions %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>日時</th><th>操作</th><th>対象</th><th>理由・備考</th></tr></thead>
+          <tbody>
+            {% for a in recent_actions %}
+              <tr>
+                <td class="table__num">{{ a.created_at|jst }}</td>
+                <td>{{ a.action }}</td>
+                <td class="table__num">{{ a.target_type }} #{{ a.target_id }}</td>
+                <td class="table__quote">{{ a.reason }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"><p class="empty__title">操作履歴はまだありません</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% import "partials/icons.html" as icon %}
+<article class="thread-item">
+  <div class="thread-item__count">
+    <span class="thread-item__count-value">{{ t.post_count }}</span>
+    <span class="thread-item__count-label">レス</span>
+  </div>
+  <div class="thread-item__main">
+    <a class="thread-item__title" href="/t/{{ t.id }}">{{ t.title }}</a>
+    <div class="thread-item__meta">
+      <span class="badge badge--cat">{{ t.category.name }}</span>
+      {% if t.is_locked %}
+        <span class="badge badge--locked">{{ icon.lock('icon icon--sm') }}返信締切</span>
+      {% endif %}
+      <span>{{ t.author.public_name }}</span>
+      <span class="meta-sep" aria-hidden="true">/</span>
+      <span>最終更新 {{ t.last_posted_at|rel }}</span>
+      <span class="meta-sep desktop-only" aria-hidden="true">/</span>
+      <span class="desktop-only">作成 {{ t.created_at|jst }}</span>
+    </div>
+  </div>
+</article>

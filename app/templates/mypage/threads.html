@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}自分のスレッド | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">自分のスレッド</h1>
+  {% with active = 'threads' %}{% include "mypage/_nav.html" %}{% endwith %}
+  <p class="page-lede">全 {{ total }} 件</p>
+
+  <div class="card">
+    {% if threads %}
+      <div class="thread-list">
+        {% for t in threads %}{% include "partials/thread_item.html" %}{% endfor %}
+      </div>
+    {% else %}
+      {% include "partials/empty_threads.html" %}
+    {% endif %}
+  </div>
+
+  {% with base_url = '/mypage/threads?' %}{% include "partials/pagination.html" %}{% endwith %}
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="{% block description %}{{ site_name }}は、会員登録制のスレッド型掲示板です。落ち着いた画面で、じっくり読み書きできます。{% endblock %}">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#FAF7F2">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">本文へスキップ</a>
+
+{% import "partials/icons.html" as icon %}
+
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <span class="brand__mark" aria-hidden="true">瓦</span>
+      <span class="brand__name">{{ site_name }}</span>
+      <span class="brand__tag desktop-only">掲示板</span>
+    </a>
+
+    <form class="header-search searchbox searchbox--compact" action="/search" method="get" role="search">
+      <span class="searchbox__icon">{{ icon.search('icon icon--sm') }}</span>
+      <label class="visually-hidden" for="header-q">スレッドを検索</label>
+      <input class="input" type="search" id="header-q" name="q" value="{{ keyword|default('') }}"
+             placeholder="スレッドを検索" maxlength="80">
+    </form>
+
+    <div class="spacer desktop-only"></div>
+
+    <nav class="header-nav" aria-label="メインメニュー">
+      {% if current_user %}
+        <a class="btn btn--primary btn--sm desktop-only" href="/threads/new">
+          {{ icon.pen('btn__icon') }}スレッドを作成
+        </a>
+        <div class="usermenu">
+          <button class="usermenu__toggle" type="button" data-usermenu-toggle
+                  aria-expanded="false" aria-haspopup="true" aria-controls="usermenu-panel">
+            <span class="usermenu__avatar" aria-hidden="true">{{ current_user.display_name[:1] }}</span>
+            <span class="usermenu__name desktop-only">{{ current_user.display_name }}</span>
+          </button>
+          <div class="usermenu__panel" id="usermenu-panel" data-usermenu-panel hidden>
+            <div class="usermenu__header">
+              <div class="usermenu__header-name">{{ current_user.display_name }}</div>
+              <div class="usermenu__header-role">
+                {% if current_user.is_admin %}管理者アカウント{% else %}一般会員{% endif %}
+              </div>
+            </div>
+            <a class="usermenu__link" href="/mypage">マイページ</a>
+            <a class="usermenu__link" href="/mypage/threads">自分のスレッド</a>
+            <a class="usermenu__link" href="/mypage/posts">自分の投稿</a>
+            <a class="usermenu__link" href="/mypage/settings">アカウント設定</a>
+            {% if current_user.is_admin %}
+              <a class="usermenu__link" href="/admin">管理画面</a>
+            {% endif %}
+            <form class="usermenu__form" action="/logout" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">ログアウト</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <a class="btn btn--ghost btn--sm" href="/login">ログイン</a>
+        <a class="btn btn--primary btn--sm" href="/register">新規登録</a>
+      {% endif %}
+    </nav>
+  </div>
+
+  {% if categories %}
+  <div class="catbar">
+    <div class="container">
+      <nav class="catbar__scroll" aria-label="カテゴリー">
+        <a class="catbar__link {% if not category %}is-active{% endif %}" href="/">すべて</a>
+        {% for c in categories %}
+          <a class="catbar__link {% if category and category.id == c.id %}is-active{% endif %}"
+             href="/c/{{ c.slug }}">{{ c.name }}</a>
+        {% endfor %}
+      </nav>
+    </div>
+  </div>
+  {% endif %}
+</header>
+
+<main class="main" id="main">
+  <div class="container {% block container_class %}{% endblock %}">
+    {% include "partials/flash.html" %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+{% block fab %}{% endblock %}
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div>
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">瓦</span>
+        <span class="brand__name">{{ site_name }}</span>
+      </div>
+      <p class="site-footer__note">
+        {{ site_name }}は、会員登録のうえ任意の表示名で書き込めるスレッド型掲示板です。
+        投稿内容の責任は投稿者本人にあります。ご利用の前に利用規約をお読みください。
+      </p>
+    </div>
+    <nav class="footer-links" aria-label="フッターメニュー">
+      <a href="/terms">利用規約</a>
+      <a href="/privacy">プライバシーポリシー</a>
+      <a href="/guidelines">ガイドライン</a>
+      <a href="/contact">お問い合わせ・削除依頼</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

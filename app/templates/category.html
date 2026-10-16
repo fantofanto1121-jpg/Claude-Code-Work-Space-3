@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}{{ category.name }} | {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="stack">
+  <nav class="breadcrumb" aria-label="現在位置">
+    <a href="/">トップ</a><span aria-hidden="true">›</span><span>{{ category.name }}</span>
+  </nav>
+
+  <div class="row row--between row--wrap">
+    <div>
+      <h1 class="page-title">{{ category.name }}</h1>
+      <p class="page-lede">{{ category.description }}（全 {{ total }} スレッド）</p>
+    </div>
+    {% if current_user %}
+      <a class="btn btn--primary desktop-only" href="/threads/new?category={{ category.slug }}">
+        {{ icon.pen('btn__icon') }}このカテゴリーに作成
+      </a>
+    {% endif %}
+  </div>
+
+  <nav class="tabs" aria-label="並べ替え">
+    {% for key, label in sort_options.items() %}
+      <a class="tabs__item {% if sort == key %}is-active{% endif %}"
+         href="/c/{{ category.slug }}?sort={{ key }}"
+         {% if sort == key %}aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="card">
+    {% if threads %}
+      <div class="thread-list">
+        {% for t in threads %}{% include "partials/thread_item.html" %}{% endfor %}
+      </div>
+    {% else %}
+      {% include "partials/empty_threads.html" %}
+    {% endif %}
+  </div>
+
+  {% with base_url = '/c/' ~ category.slug ~ '?sort=' ~ sort ~ '&' %}
+    {% include "partials/pagination.html" %}
+  {% endwith %}
+</div>
+{% endblock %}
+
+{% block fab %}
+{% if current_user %}
+<a class="fab" href="/threads/new?category={{ category.slug }}">{{ icon.plus('btn__icon') }}スレッド作成</a>
+{% endif %}
+{% endblock %}

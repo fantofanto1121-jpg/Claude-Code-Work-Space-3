@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}スレッドを作成 | {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="stack">
+  <a class="back-link" href="/">{{ icon.back('icon icon--sm') }}トップへ戻る</a>
+  <h1 class="page-title">スレッドを作成する</h1>
+
+  {% if errors %}
+    <div class="notice notice--error" role="alert">
+      <span class="notice__label">エラー</span>
+      <span>入力内容に問題があります。下の赤い文字の箇所をご確認ください。</span>
+    </div>
+  {% endif %}
+
+  <form class="card" action="/threads" method="post" data-guard>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="card__body">
+
+      <div class="field">
+        <label class="field__label" for="category">
+          カテゴリー<span class="field__required">必須</span>
+        </label>
+        <select class="select {% if errors.category %}select--invalid{% endif %}" id="category" name="category" required>
+          <option value="">選んでください</option>
+          {% for c in categories %}
+            <option value="{{ c.slug }}"
+              {% if form.category == c.slug or (not form.category and selected_slug == c.slug) %}selected{% endif %}>
+              {{ c.name }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if errors.category %}<p class="field__error">{{ errors.category }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="title">
+          スレッドタイトル<span class="field__required">必須</span>
+        </label>
+        <input class="input {% if errors.title %}input--invalid{% endif %}" type="text" id="title" name="title"
+               value="{{ form.title }}" maxlength="{{ limits.thread_title_max }}" required
+               placeholder="例: 初心者向けのプログラミング学習法を語るスレ">
+        <div class="row row--between">
+          <p class="field__hint">{{ limits.thread_title_min }}〜{{ limits.thread_title_max }}文字。内容がひと目で分かる書き方にすると読まれやすくなります。</p>
+          <span class="counter" data-counter-for="title" data-max="{{ limits.thread_title_max }}"></span>
+        </div>
+        {% if errors.title %}<p class="field__error">{{ errors.title }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="body">
+          本文（1番目の投稿）<span class="field__required">必須</span>
+        </label>
+        <textarea class="textarea {% if errors.body %}textarea--invalid{% endif %}" id="body" name="body"
+                  maxlength="{{ limits.post_body_max }}" required
+                  placeholder="話題の内容や、話し合いたいことを書いてください。">{{ form.body }}</textarea>
+        <div class="row row--between">
+          <p class="field__hint">最大 {{ limits.post_body_max }} 文字。改行はそのまま表示されます。</p>
+          <span class="counter" data-counter-for="body" data-max="{{ limits.post_body_max }}"></span>
+        </div>
+        {% if errors.body %}<p class="field__error">{{ errors.body }}</p>{% endif %}
+      </div>
+
+      <div class="notice notice--info">
+        <span class="notice__label">確認</span>
+        <span>
+          投稿は <strong>{{ current_user.display_name if current_user else '' }}</strong> という表示名で公開されます。
+          メールアドレスは公開されません。個人情報や誹謗中傷の書き込みは
+          <a href="/guidelines">ガイドライン</a>で禁止しています。
+        </span>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit" data-submitting-label="送信中…">
+          {{ icon.pen('btn__icon') }}この内容で作成する
+        </button>
+        <a class="btn btn--ghost" href="/">キャンセル</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}{{ thread.title }} | {{ site_name }}{% endblock %}
+{% block description %}{{ thread.title }} — {{ site_name }}のスレッド。{{ thread.post_count }}件の投稿。{% endblock %}
+
+{% block content %}
+<div class="stack">
+  <nav class="breadcrumb" aria-label="現在位置">
+    <a href="/">トップ</a><span aria-hidden="true">›</span>
+    <a href="/c/{{ thread.category.slug }}">{{ thread.category.name }}</a><span aria-hidden="true">›</span>
+    <span>スレッド</span>
+  </nav>
+
+  <div>
+    <div class="thread-head">
+      <h1 class="thread-head__title">{{ thread.title }}</h1>
+      <div class="thread-head__meta">
+        <span class="badge badge--cat">{{ thread.category.name }}</span>
+        {% if thread.is_locked %}
+          <span class="badge badge--locked">{{ icon.lock('icon icon--sm') }}返信締切</span>
+        {% endif %}
+        <span>{{ icon.user('icon icon--sm') }} {{ thread.author.public_name }}</span>
+        <span class="meta-sep" aria-hidden="true">/</span>
+        <span>{{ icon.chat('icon icon--sm') }} {{ thread.post_count }} レス</span>
+        <span class="meta-sep" aria-hidden="true">/</span>
+        <span>{{ icon.clock('icon icon--sm') }} 作成 {{ thread.created_at|jst }}</span>
+      </div>
+    </div>
+
+    <div class="post-list">
+      {% for post in posts %}
+        <article class="post {% if post.is_op %}post--op{% endif %} {% if post.is_deleted %}post--deleted{% endif %}" id="r{{ post.post_number }}">
+          <div class="post__head">
+            <a class="post__number" href="/t/{{ thread.id }}?page={{ page }}#r{{ post.post_number }}">{{ post.post_number }}</a>
+            <span class="post__author">{{ post.author.public_name }}</span>
+            {% if post.is_op %}<span class="badge badge--neutral">スレ主</span>{% endif %}
+            {% if current_user and post.user_id == current_user.id %}<span class="badge badge--mine">自分</span>{% endif %}
+            <span class="meta-sep" aria-hidden="true">/</span>
+            <time datetime="{{ post.created_at.isoformat() }}">{{ post.created_at|jst }}</time>
+            {% if post.reply_to_number %}
+              <span class="meta-sep" aria-hidden="true">/</span>
+              <a class="anchor-link" href="#r{{ post.reply_to_number }}">&gt;&gt;{{ post.reply_to_number }} への返信</a>
+            {% endif %}
+          </div>
+
+          {% if post.is_deleted %}
+            <div class="post__body">
+              <span class="post__deleted-note">
+                {{ icon.trash('icon icon--sm') }}
+                {% if post.deleted_by == 'admin' %}
+                  この投稿は管理者により非表示にされました。
+                {% else %}
+                  この投稿は投稿者本人により削除されました。
+                {% endif %}
+              </span>
+            </div>
+          {% else %}
+            <div class="post__body">{{ post.body|postbody(thread.id) }}</div>
+            <div class="post__actions">
+              {% if current_user and not thread.is_locked %}
+                <button class="btn btn--ghost btn--sm" type="button" data-reply-to="{{ post.post_number }}">
+                  {{ icon.reply('btn__icon') }}返信
+                </button>
+              {% endif %}
+              {% if current_user and (post.user_id == current_user.id or current_user.is_admin) %}
+                <form class="inline-form" action="/posts/{{ post.id }}/delete" method="post"
+                      data-confirm="この投稿を削除します。元に戻せません。よろしいですか？">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="btn btn--ghost btn--sm" type="submit">{{ icon.trash('btn__icon') }}削除</button>
+                </form>
+              {% endif %}
+              {% if current_user and post.user_id != current_user.id %}
+                <a class="btn btn--ghost btn--sm" href="/posts/{{ post.id }}/report">{{ icon.flag('btn__icon') }}通報</a>
+              {% endif %}
+              {% if current_user and current_user.is_admin %}
+                <form class="inline-form" action="/admin/posts/{{ post.id }}/toggle" method="post">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="btn btn--ghost btn--sm" type="submit">管理: 非表示</button>
+                </form>
+              {% endif %}
+            </div>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% with base_url = '/t/' ~ thread.id ~ '?' %}
+    {% include "partials/pagination.html" %}
+  {% endwith %}
+
+  {# ---- 返信フォーム ---- #}
+  {% if thread.is_locked %}
+    <div class="notice notice--warn">
+      <span class="notice__label">締切</span>
+      <span>このスレッドは管理者により返信が締め切られています。新しい話題は別のスレッドを作成してください。</span>
+    </div>
+  {% elif not current_user %}
+    <div class="card">
+      <div class="card__body row row--between row--wrap">
+        <p class="page-lede">返信するには会員登録（無料）が必要です。メールアドレスは公開されません。</p>
+        <div class="row">
+          <a class="btn btn--primary" href="/register">新規登録</a>
+          <a class="btn btn--outline" href="/login?next=/t/{{ thread.id }}">ログイン</a>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <form class="reply-form" id="reply-form" action="/t/{{ thread.id }}/posts" method="post" data-guard>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="reply_to_number" id="reply-to-number" value="{{ form.reply_to_number }}">
+
+      <div class="reply-form__head">
+        <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>返信を投稿する</h2>
+        <span class="reply-target" data-reply-label {% if not reply_to %}hidden{% endif %}>
+          {% if reply_to %}&gt;&gt;{{ reply_to }} への返信{% endif %}
+        </span>
+      </div>
+
+      {% if errors.body %}
+        <div class="notice notice--error" role="alert">
+          <span class="notice__label">エラー</span><span>{{ errors.body }}</span>
+        </div>
+      {% endif %}
+
+      <div class="field">
+        <label class="field__label" for="reply-body">
+          本文<span class="field__required">必須</span>
+        </label>
+        <textarea class="textarea {% if errors.body %}textarea--invalid{% endif %}" id="reply-body" name="body"
+                  maxlength="{{ limits.post_body_max }}" required
+                  placeholder="本文を入力してください。&#10;「&gt;&gt;3」と書くと3番の投稿へのリンクになります。">{{ form.body }}</textarea>
+        <div class="row row--between">
+          <p class="field__hint">{{ current_user.display_name }} として投稿されます。</p>
+          <span class="counter" data-counter-for="reply-body" data-max="{{ limits.post_body_max }}"></span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit" data-submitting-label="送信中…">
+          {{ icon.reply('btn__icon') }}投稿する
+        </button>
+        <a class="btn btn--ghost" href="/c/{{ thread.category.slug }}">スレッド一覧に戻る</a>
+      </div>
+    </form>
+  {% endif %}
+
+  <a class="back-link" href="/c/{{ thread.category.slug }}">
+    {{ icon.back('icon icon--sm') }}{{ thread.category.name }} のスレッド一覧に戻る
+  </a>
+</div>
+{% endblock %}

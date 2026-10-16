@@ -1,0 +1,38 @@
+# Render (https://render.com) 用の設定ファイル。
+# リポジトリをRenderに接続すると、この内容が自動で読み込まれます。
+# 手順の詳細は docs/DEPLOY.md を参照してください。
+services:
+  - type: web
+    name: kawaraban
+    runtime: python
+    plan: free
+    region: singapore          # 日本から最も近いリージョン
+    branch: main
+    buildCommand: "pip install -r requirements.txt"
+    # 起動前に init_db.py を実行して、テーブルと初期カテゴリーを用意する
+    preDeployCommand: "python scripts/init_db.py"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers"
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SECRET_KEY
+        generateValue: true     # Renderが安全なランダム値を自動生成する
+      - key: APP_ENV
+        value: production
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
+      - key: DATABASE_URL
+        sync: false             # Neon の接続URLを手入力（画面から設定）
+      - key: BASE_URL
+        sync: false             # 例: https://kawaraban.onrender.com
+      - key: SITE_NAME
+        value: カワラ版
+      - key: ADMIN_EMAILS
+        sync: false             # 自分のメールアドレス
+      - key: RESEND_API_KEY
+        sync: false             # 未設定でも動作する（メール送信のみ無効）
+      - key: MAIL_FROM
+        sync: false
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "false"

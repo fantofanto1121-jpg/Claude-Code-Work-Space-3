@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}{{ site_name }} — スレッド型の情報掲示板{% endblock %}
+
+{% block content %}
+<div class="stack">
+
+  <section class="hero">
+    <h1 class="hero__title">読みやすさを第一にした、<br>スレッド型の情報掲示板</h1>
+    <p class="hero__text">
+      {{ site_name }}は、会員登録のうえ、好きな表示名で書き込めるスレッド型の掲示板です。
+      メールアドレスは公開されません。落ち着いた画面で、じっくり読んで、じっくり書けます。
+    </p>
+    <div class="hero__actions">
+      {% if current_user %}
+        <a class="btn btn--primary" href="/threads/new">{{ icon.pen('btn__icon') }}スレッドを作成する</a>
+      {% else %}
+        <a class="btn btn--primary" href="/register">はじめる（無料登録）</a>
+        <a class="btn btn--outline" href="/login">ログイン</a>
+      {% endif %}
+      <a class="btn btn--ghost" href="/guidelines">はじめての方へ</a>
+    </div>
+    <div class="hero__stats">
+      <div class="stat">
+        <div class="stat__value">{{ total_threads }}</div>
+        <div class="stat__label">公開中のスレッド</div>
+      </div>
+      <div class="stat">
+        <div class="stat__value">{{ categories|length }}</div>
+        <div class="stat__label">カテゴリー</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stack-sm">
+    <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>カテゴリーから探す</h2>
+    {% if categories %}
+      <div class="cat-grid">
+        {% for c in categories %}
+          <a class="cat-card" href="/c/{{ c.slug }}">
+            <div class="cat-card__name">{{ c.name }}</div>
+            <div class="cat-card__desc">{{ c.description }}</div>
+            <div class="cat-card__count">{{ category_counts.get(c.id, 0) }} スレッド</div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card"><div class="empty">
+        <p class="empty__title">カテゴリーがまだありません</p>
+        <p class="empty__text">管理者が <code>python scripts/init_db.py</code> を実行すると初期カテゴリーが作成されます。</p>
+      </div></div>
+    {% endif %}
+  </section>
+
+  <section class="stack-sm">
+    <div class="row row--between">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>最近更新されたスレッド</h2>
+    </div>
+    <div class="card">
+      {% if updated_threads %}
+        <div class="thread-list">
+          {% for t in updated_threads %}{% include "partials/thread_item.html" %}{% endfor %}
+        </div>
+      {% else %}
+        {% include "partials/empty_threads.html" %}
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="cat-grid">
+    <section class="stack-sm">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>新着スレッド</h2>
+      <div class="card">
+        {% if latest_threads %}
+          <div class="rank-list">
+            {% for t in latest_threads %}
+            <div class="rank-item">
+              <span class="rank-item__no" aria-hidden="true">{{ loop.index }}</span>
+              <div class="rank-item__body">
+                <a class="rank-item__title" href="/t/{{ t.id }}">{{ t.title }}</a>
+                <div class="rank-item__meta">{{ t.category.name }}・{{ t.created_at|rel }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          {% include "partials/empty_threads.html" %}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="stack-sm">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>レスの多いスレッド</h2>
+      <div class="card">
+        {% if popular_threads %}
+          <div class="rank-list">
+            {% for t in popular_threads %}
+            <div class="rank-item">
+              <span class="rank-item__no {% if loop.index <= 3 %}rank-item__no--top{% endif %}" aria-hidden="true">{{ loop.index }}</span>
+              <div class="rank-item__body">
+                <a class="rank-item__title" href="/t/{{ t.id }}">{{ t.title }}</a>
+                <div class="rank-item__meta">{{ t.post_count }} レス・{{ t.category.name }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          {% include "partials/empty_threads.html" %}
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block fab %}
+{% if current_user %}
+<a class="fab" href="/threads/new">{{ icon.plus('btn__icon') }}スレッド作成</a>
+{% endif %}
+{% endblock %}

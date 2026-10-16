@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}パスワード再設定 | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="auth-wrap stack">
+  <div class="auth-card">
+    <h1 class="auth-title">パスワードの再設定</h1>
+    <p class="auth-lede">登録したメールアドレスに、再設定用のリンクをお送りします。</p>
+
+    {% if errors.form %}
+      <div class="notice notice--error" role="alert">
+        <span class="notice__label">エラー</span><span>{{ errors.form }}</span>
+      </div>
+    {% endif %}
+
+    <form action="/password/forgot" method="post" data-guard>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label class="field__label" for="email">メールアドレス<span class="field__required">必須</span></label>
+        <input class="input" type="email" id="email" name="email" value="{{ form.email|default('') }}"
+               autocomplete="email" required maxlength="254" autofocus>
+        <p class="field__hint">セキュリティのため、登録の有無にかかわらず同じ画面を表示します。</p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary btn--block" type="submit" data-submitting-label="送信中…">再設定メールを送る</button>
+      </div>
+    </form>
+
+    <p class="auth-alt"><a href="/login">ログイン画面に戻る</a></p>
+  </div>
+</div>
+{% endblock %}

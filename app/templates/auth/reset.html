@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}新しいパスワードの設定 | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="auth-wrap stack">
+  <div class="auth-card">
+    <h1 class="auth-title">新しいパスワードを設定</h1>
+    <p class="auth-lede">設定が完了すると、すべての端末でログアウトされます。</p>
+
+    <form action="/password/reset/{{ token }}" method="post" data-guard>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="field">
+        <label class="field__label" for="password">新しいパスワード<span class="field__required">必須</span></label>
+        <input class="input {% if errors.password %}input--invalid{% endif %}" type="password" id="password"
+               name="password" autocomplete="new-password" required
+               minlength="{{ limits.password_min }}" maxlength="{{ limits.password_max }}" autofocus>
+        <p class="field__hint">{{ limits.password_min }}文字以上。英字と数字を組み合わせてください。</p>
+        {% if errors.password %}<p class="field__error">{{ errors.password }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="password_confirm">新しいパスワード（確認）<span class="field__required">必須</span></label>
+        <input class="input {% if errors.password_confirm %}input--invalid{% endif %}" type="password"
+               id="password_confirm" name="password_confirm" autocomplete="new-password" required>
+        {% if errors.password_confirm %}<p class="field__error">{{ errors.password_confirm }}</p>{% endif %}
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary btn--block" type="submit" data-submitting-label="設定中…">パスワードを変更する</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

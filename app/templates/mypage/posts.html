@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}自分の投稿 | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">自分の投稿</h1>
+  {% with active = 'posts' %}{% include "mypage/_nav.html" %}{% endwith %}
+  <p class="page-lede">全 {{ total }} 件</p>
+
+  <div class="card">
+    {% if posts %}
+      <div class="thread-list">
+        {% for p in posts %}
+          <article class="thread-item">
+            <div class="thread-item__count">
+              <span class="thread-item__count-value">{{ p.post_number }}</span>
+              <span class="thread-item__count-label">番</span>
+            </div>
+            <div class="thread-item__main">
+              <a class="thread-item__title" href="/t/{{ p.thread_id }}#r{{ p.post_number }}">{{ p.thread.title }}</a>
+              <p class="thread-item__excerpt">{{ p.body|excerpt(120) }}</p>
+              <div class="thread-item__meta">
+                <span>{{ p.created_at|jst }}</span>
+                <span class="meta-sep" aria-hidden="true">/</span>
+                <form class="inline-form" action="/posts/{{ p.id }}/delete" method="post"
+                      data-confirm="この投稿を削除します。元に戻せません。よろしいですか？">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="btn btn--ghost btn--sm" type="submit">{{ icon.trash('btn__icon') }}削除</button>
+                </form>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">
+        <div class="empty__icon">{{ icon.chat('empty__icon') }}</div>
+        <p class="empty__title">まだ投稿がありません</p>
+        <div class="empty__action"><a class="btn btn--primary" href="/">スレッドを探す</a></div>
+      </div>
+    {% endif %}
+  </div>
+
+  {% with base_url = '/mypage/posts?' %}{% include "partials/pagination.html" %}{% endwith %}
+</div>
+{% endblock %}

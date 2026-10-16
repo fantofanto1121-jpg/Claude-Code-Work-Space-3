@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}アカウントの削除 | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="auth-wrap stack">
+  <a class="back-link" href="/mypage/settings">アカウント設定に戻る</a>
+  <h1 class="page-title">アカウントの削除</h1>
+
+  <div class="notice notice--error">
+    <span class="notice__label">注意</span>
+    <span>この操作は取り消せません。実行前に内容をよくお読みください。</span>
+  </div>
+
+  <div class="card">
+    <div class="card__body prose">
+      <h3>削除されるもの</h3>
+      <ul>
+        <li>登録メールアドレス（復元できない値に置き換えます）</li>
+        <li>パスワード（無効化します）</li>
+        <li>表示名（「退会したユーザー」になります）</li>
+        <li>ログイン状態（すべての端末で即時ログアウト）</li>
+      </ul>
+      <h3>残るもの</h3>
+      <ul>
+        <li>これまでの投稿本文とスレッド（会話の流れを保つため）。投稿者名は「退会したユーザー」と表示されます。</li>
+        <li>法令対応・不正防止のために必要な最小限の記録</li>
+      </ul>
+      <p>投稿そのものを消したい場合は、<strong>削除の前に</strong><a href="/mypage/posts">自分の投稿</a>から個別に削除してください。</p>
+    </div>
+  </div>
+
+  <form class="card" action="/mypage/delete" method="post" data-guard
+        data-confirm="本当にアカウントを削除しますか？この操作は取り消せません。">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="card__body">
+      <div class="field">
+        <label class="field__label" for="password">パスワード<span class="field__required">必須</span></label>
+        <input class="input {% if errors.password %}input--invalid{% endif %}" type="password" id="password"
+               name="password" autocomplete="current-password" required>
+        {% if errors.password %}<p class="field__error">{{ errors.password }}</p>{% endif %}
+      </div>
+      <div class="field">
+        <label class="field__label" for="confirm">確認<span class="field__required">必須</span></label>
+        <input class="input {% if errors.confirm %}input--invalid{% endif %}" type="text" id="confirm"
+               name="confirm" required placeholder="削除します" autocomplete="off">
+        <p class="field__hint">確認のため「削除します」と入力してください。</p>
+        {% if errors.confirm %}<p class="field__error">{{ errors.confirm }}</p>{% endif %}
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--danger" type="submit">アカウントを削除する</button>
+        <a class="btn btn--ghost" href="/mypage">やめる</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

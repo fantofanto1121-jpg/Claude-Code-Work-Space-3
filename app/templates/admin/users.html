@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}利用者の管理 | {{ site_name }}{% endblock %}
+{% block container_class %}container--wide{% endblock %}
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">利用者の管理</h1>
+  {% with active = 'users' %}{% include "admin/_nav.html" %}{% endwith %}
+
+  <form class="searchbox" action="/admin/users" method="get">
+    <span class="searchbox__icon">{{ icon.search() }}</span>
+    <label class="visually-hidden" for="user-q">表示名で検索</label>
+    <input class="input" type="search" id="user-q" name="q" value="{{ q }}" placeholder="表示名で検索" maxlength="80">
+  </form>
+
+  <p class="page-lede">{{ total }} 名</p>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>表示名</th><th>権限</th><th>状態</th><th>登録日</th><th>操作</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td>
+              {{ u.display_name }}
+              <div class="doc-meta">ID: {{ u.id }}</div>
+            </td>
+            <td>
+              {% if u.is_admin %}<span class="badge badge--admin">管理者</span>
+              {% else %}<span class="badge badge--neutral">一般</span>{% endif %}
+            </td>
+            <td>
+              {% if u.is_deleted %}<span class="badge badge--deleted">退会済み</span>
+              {% elif u.ban_is_active() %}
+                <span class="badge badge--danger">制限中</span>
+                <div class="doc-meta">
+                  {% if u.banned_until %}{{ u.banned_until|jst }} まで{% else %}無期限{% endif %}
+                  {% if u.ban_reason %}／{{ u.ban_reason }}{% endif %}
+                </div>
+              {% else %}<span class="badge badge--ok">通常</span>{% endif %}
+            </td>
+            <td class="table__num">{{ u.created_at|jst }}</td>
+            <td>
+              {% if u.id != current_user.id and not u.is_admin and not u.is_deleted %}
+                <form class="inline-form" action="/admin/users/{{ u.id }}" method="post">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  {% if u.is_banned %}
+                    <button class="btn btn--outline btn--sm" type="submit" name="action" value="unban">制限を解除</button>
+                  {% else %}
+                    <label class="visually-hidden" for="days-{{ u.id }}">日数</label>
+                    <select class="select" id="days-{{ u.id }}" name="days">
+                      <option value="1">1日</option>
+                      <option value="7" selected>7日</option>
+                      <option value="30">30日</option>
+                      <option value="0">無期限</option>
+                    </select>
+                    <label class="visually-hidden" for="unote-{{ u.id }}">理由</label>
+                    <input class="input" type="text" id="unote-{{ u.id }}" name="note" placeholder="理由" maxlength="200">
+                    <button class="btn btn--danger btn--sm" type="submit" name="action" value="ban">投稿を制限</button>
+                  {% endif %}
+                </form>
+              {% else %}
+                <span class="doc-meta">操作対象外</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% with base_url = '/admin/users?q=' ~ q|urlencode ~ '&' %}{% include "partials/pagination.html" %}{% endwith %}
+</div>
+{% endblock %}

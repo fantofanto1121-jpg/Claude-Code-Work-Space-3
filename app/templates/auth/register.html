@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}新規会員登録 | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="auth-wrap stack">
+  <div class="auth-card">
+    <h1 class="auth-title">新規会員登録</h1>
+    <p class="auth-lede">登録は無料です。メールアドレスが他の利用者に公開されることはありません。</p>
+
+    {% if errors %}
+      <div class="notice notice--error" role="alert">
+        <span class="notice__label">エラー</span>
+        <span>入力内容をご確認ください。</span>
+      </div>
+    {% endif %}
+
+    <form action="/register" method="post" data-guard>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="field">
+        <label class="field__label" for="email">メールアドレス<span class="field__required">必須</span></label>
+        <input class="input {% if errors.email %}input--invalid{% endif %}" type="email" id="email" name="email"
+               value="{{ form.email|default('') }}" autocomplete="email" required maxlength="254"
+               placeholder="you@example.com">
+        <p class="field__hint">ログインとパスワード再設定にだけ使います。掲示板には表示されません。</p>
+        {% if errors.email %}<p class="field__error">{{ errors.email }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="display_name">表示名<span class="field__required">必須</span></label>
+        <input class="input {% if errors.display_name %}input--invalid{% endif %}" type="text" id="display_name"
+               name="display_name" value="{{ form.display_name|default('') }}" required
+               maxlength="{{ limits.display_name_max }}" placeholder="例: 名無しの職人">
+        <p class="field__hint">投稿時に表示される名前です。本名以外の、好きな名前を設定してください（あとから変更できます）。</p>
+        {% if errors.display_name %}<p class="field__error">{{ errors.display_name }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="password">パスワード<span class="field__required">必須</span></label>
+        <input class="input {% if errors.password %}input--invalid{% endif %}" type="password" id="password"
+               name="password" autocomplete="new-password" required
+               minlength="{{ limits.password_min }}" maxlength="{{ limits.password_max }}">
+        <p class="field__hint">{{ limits.password_min }}文字以上。英字と数字を組み合わせてください。</p>
+        {% if errors.password %}<p class="field__error">{{ errors.password }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="password_confirm">パスワード（確認）<span class="field__required">必須</span></label>
+        <input class="input {% if errors.password_confirm %}input--invalid{% endif %}" type="password"
+               id="password_confirm" name="password_confirm" autocomplete="new-password" required>
+        {% if errors.password_confirm %}<p class="field__error">{{ errors.password_confirm }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="checkbox">
+          <input type="checkbox" name="agree" value="yes" required>
+          <span><a href="/terms" target="_blank" rel="noopener">利用規約</a>と<a href="/privacy" target="_blank" rel="noopener">プライバシーポリシー</a>に同意します</span>
+        </label>
+        {% if errors.agree %}<p class="field__error">{{ errors.agree }}</p>{% endif %}
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary btn--block" type="submit" data-submitting-label="登録中…">登録する</button>
+      </div>
+    </form>
+
+    <p class="auth-alt">すでにアカウントをお持ちですか？ <a href="/login">ログイン</a></p>
+  </div>
+</div>
+{% endblock %}

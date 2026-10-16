@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}{% if keyword %}「{{ keyword }}」の検索結果{% else %}スレッド検索{% endif %} | {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="stack">
+  <div>
+    <h1 class="page-title">スレッド検索</h1>
+    <p class="page-lede">スレッドのタイトルと投稿本文から探します。2文字以上で検索できます。</p>
+  </div>
+
+  <form class="card" action="/search" method="get" role="search">
+    <div class="card__body stack-sm">
+      <div class="searchbox">
+        <span class="searchbox__icon">{{ icon.search() }}</span>
+        <label class="visually-hidden" for="q">検索キーワード</label>
+        <input class="input" type="search" id="q" name="q" value="{{ keyword }}"
+               placeholder="キーワードを入力" maxlength="80" autofocus>
+      </div>
+      <div class="row row--wrap">
+        <label class="visually-hidden" for="category">カテゴリー</label>
+        <select class="select" id="category" name="category">
+          <option value="">すべてのカテゴリー</option>
+          {% for c in categories %}
+            <option value="{{ c.slug }}" {% if selected_category and selected_category.id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <label class="visually-hidden" for="sort">並べ替え</label>
+        <select class="select" id="sort" name="sort">
+          {% for key, label in sort_options.items() %}
+            <option value="{{ key }}" {% if sort == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn--primary" type="submit">{{ icon.search('btn__icon') }}検索する</button>
+      </div>
+      {% if search_error %}
+        <p class="field__error">{{ search_error }}</p>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if searched %}
+    <p class="page-lede">
+      「{{ keyword }}」の検索結果: <strong>{{ total }}</strong> 件
+      {% if selected_category %}（カテゴリー: {{ selected_category.name }}）{% endif %}
+    </p>
+    <div class="card">
+      {% if threads %}
+        <div class="thread-list">
+          {% for t in threads %}{% include "partials/thread_item.html" %}{% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">
+          <div class="empty__icon">{{ icon.search('empty__icon') }}</div>
+          <p class="empty__title">一致するスレッドが見つかりませんでした</p>
+          <p class="empty__text">キーワードを短くする、別の言葉で言い換える、カテゴリーの指定を外すとみつかるかもしれません。</p>
+        </div>
+      {% endif %}
+    </div>
+    {% with base_url = '/search?q=' ~ keyword|urlencode ~ '&sort=' ~ sort ~ '&category=' ~ (selected_category.slug if selected_category else '') ~ '&' %}
+      {% include "partials/pagination.html" %}
+    {% endwith %}
+  {% endif %}
+</div>
+{% endblock %}

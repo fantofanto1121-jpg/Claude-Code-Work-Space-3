@@ -1,0 +1,13 @@
+{% import "partials/icons.html" as icon %}
+<div class="empty">
+  <div class="empty__icon">{{ icon.inbox('empty__icon') }}</div>
+  <p class="empty__title">まだスレッドがありません</p>
+  <p class="empty__text">最初の1件を立てて、話題をはじめてみませんか。</p>
+  <div class="empty__action">
+    {% if current_user %}
+      <a class="btn btn--primary" href="/threads/new">スレッドを作成する</a>
+    {% else %}
+      <a class="btn btn--primary" href="/register">無料登録してはじめる</a>
+    {% endif %}
+  </div>
+</div>

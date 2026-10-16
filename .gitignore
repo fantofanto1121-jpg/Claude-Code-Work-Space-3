@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# 環境変数・秘密情報（絶対にコミットしない）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ローカル開発用データベース
+*.db
+*.sqlite3
+backups/
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

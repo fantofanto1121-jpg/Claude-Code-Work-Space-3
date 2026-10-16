@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}投稿を通報する | {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="auth-wrap stack">
+  <a class="back-link" href="/t/{{ thread.id }}#r{{ post.post_number }}">
+    {{ icon.back('icon icon--sm') }}スレッドに戻る
+  </a>
+
+  <h1 class="page-title">投稿を通報する</h1>
+  <p class="page-lede">
+    ガイドラインに違反していると思われる投稿を運営へ知らせます。
+    通報したことは、投稿者には通知されません。
+  </p>
+
+  <div class="card">
+    <div class="card__body stack-sm">
+      <p class="doc-meta">通報の対象</p>
+      <p class="field__hint">{{ thread.title }} の {{ post.post_number }} 番</p>
+      <blockquote class="table__quote">{{ post.body|excerpt(160) }}</blockquote>
+    </div>
+  </div>
+
+  <form class="card" action="/posts/{{ post.id }}/report" method="post" data-guard>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="card__body">
+      <div class="field">
+        <span class="field__label">通報の理由<span class="field__required">必須</span></span>
+        <div class="stack-sm">
+          {% for key, label in report_reasons.items() %}
+            <label class="checkbox">
+              <input type="radio" name="reason" value="{{ key }}" {% if form.reason == key %}checked{% endif %} required>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if errors.reason %}<p class="field__error">{{ errors.reason }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="detail">
+          詳しい状況<span class="field__optional">任意（「その他」を選んだ場合は必須）</span>
+        </label>
+        <textarea class="textarea {% if errors.detail %}textarea--invalid{% endif %}" id="detail" name="detail"
+                  maxlength="500" placeholder="どの部分が問題かを具体的に書いていただけると、確認が早くなります。">{{ form.detail|default('') }}</textarea>
+        {% if errors.detail %}<p class="field__error">{{ errors.detail }}</p>{% endif %}
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit" data-submitting-label="送信中…">
+          {{ icon.flag('btn__icon') }}通報する
+        </button>
+        <a class="btn btn--ghost" href="/t/{{ thread.id }}">キャンセル</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}スレッドの管理 | {{ site_name }}{% endblock %}
+{% block container_class %}container--wide{% endblock %}
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">スレッドの管理</h1>
+  {% with active = 'threads' %}{% include "admin/_nav.html" %}{% endwith %}
+  <p class="page-lede">{{ total }} 件</p>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>タイトル</th><th>カテゴリー</th><th class="table__num">レス</th><th>状態</th><th>操作</th></tr></thead>
+      <tbody>
+        {% for t in threads %}
+          <tr>
+            <td>
+              <a href="/t/{{ t.id }}">{{ t.title }}</a>
+              <div class="doc-meta">{{ t.author.public_name }}・{{ t.last_posted_at|jst }}</div>
+            </td>
+            <td>{{ t.category.name }}</td>
+            <td class="table__num">{{ t.post_count }}</td>
+            <td>
+              {% if t.is_deleted %}<span class="badge badge--deleted">削除済み</span>{% endif %}
+              {% if t.is_locked %}<span class="badge badge--locked">ロック中</span>{% endif %}
+              {% if not t.is_deleted and not t.is_locked %}<span class="badge badge--ok">公開中</span>{% endif %}
+            </td>
+            <td>
+              <form class="inline-form" action="/admin/threads/{{ t.id }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label class="visually-hidden" for="tnote-{{ t.id }}">備考</label>
+                <input class="input" type="text" id="tnote-{{ t.id }}" name="note" placeholder="理由" maxlength="300">
+                {% if t.is_locked %}
+                  <button class="btn btn--outline btn--sm" type="submit" name="action" value="unlock">ロック解除</button>
+                {% else %}
+                  <button class="btn btn--outline btn--sm" type="submit" name="action" value="lock">ロック</button>
+                {% endif %}
+                {% if t.is_deleted %}
+                  <button class="btn btn--outline btn--sm" type="submit" name="action" value="restore">復元</button>
+                {% else %}
+                  <button class="btn btn--danger btn--sm" type="submit" name="action" value="delete">削除</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% with base_url = '/admin/threads?' %}{% include "partials/pagination.html" %}{% endwith %}
+</div>
+{% endblock %}

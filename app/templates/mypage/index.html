@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}マイページ | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">マイページ</h1>
+  {% with active = 'home' %}{% include "mypage/_nav.html" %}{% endwith %}
+
+  {% if limits.require_email_verification and not current_user.email_verified %}
+    <div class="notice notice--warn">
+      <span class="notice__label">未確認</span>
+      <span>メールアドレスの確認が完了していません。確認が済むまで投稿できません。</span>
+    </div>
+  {% endif %}
+
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-tile__label">作成したスレッド</div>
+      <div class="stat-tile__value">{{ stats.thread_count }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile__label">投稿数</div>
+      <div class="stat-tile__value">{{ stats.post_count }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile__label">登録日</div>
+      <div class="stat-tile__label">{{ current_user.created_at|jst }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>表示名を変更する</h2>
+    </div>
+    <form class="card__body" action="/mypage/display-name" method="post" data-guard>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label class="field__label" for="display_name">表示名</label>
+        <input class="input {% if errors.display_name %}input--invalid{% endif %}" type="text" id="display_name"
+               name="display_name" value="{{ current_user.display_name }}"
+               maxlength="{{ limits.display_name_max }}" required>
+        <p class="field__hint">変更すると、過去の投稿の表示名もすべて新しい名前になります。</p>
+        {% if errors.display_name %}<p class="field__error">{{ errors.display_name }}</p>{% endif %}
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">変更を保存</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>最近の投稿</h2>
+      <div class="spacer"></div>
+      <a class="btn btn--ghost btn--sm" href="/mypage/posts">すべて見る</a>
+    </div>
+    {% if recent_posts %}
+      <div class="rank-list">
+        {% for p in recent_posts %}
+          <div class="rank-item">
+            <span class="rank-item__no" aria-hidden="true">{{ p.post_number }}</span>
+            <div class="rank-item__body">
+              <a class="rank-item__title" href="/t/{{ p.thread_id }}#r{{ p.post_number }}">{{ p.thread.title }}</a>
+              <div class="rank-item__meta">{{ p.body|excerpt(60) }}・{{ p.created_at|rel }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">
+        <div class="empty__icon">{{ icon.chat('empty__icon') }}</div>
+        <p class="empty__title">まだ投稿がありません</p>
+        <p class="empty__text">気になるスレッドに返信してみましょう。</p>
+        <div class="empty__action"><a class="btn btn--primary" href="/">スレッドを探す</a></div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

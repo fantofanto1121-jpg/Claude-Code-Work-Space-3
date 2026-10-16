@@ -1,0 +1,11 @@
+{% if flash %}
+<div class="notice notice--{{ flash[0] }}" role="status">
+  <span class="notice__label">
+    {%- if flash[0] == 'success' -%}完了
+    {%- elif flash[0] == 'error' -%}エラー
+    {%- elif flash[0] == 'warn' -%}注意
+    {%- else -%}お知らせ{%- endif -%}
+  </span>
+  <span>{{ flash[1] }}</span>
+</div>
+{% endif %}

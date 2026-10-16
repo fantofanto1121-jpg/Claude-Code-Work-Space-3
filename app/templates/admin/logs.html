@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}操作履歴 | {{ site_name }}{% endblock %}
+{% block container_class %}container--wide{% endblock %}
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">操作履歴</h1>
+  {% with active = 'logs' %}{% include "admin/_nav.html" %}{% endwith %}
+  <p class="page-lede">管理操作はすべて記録されます（全 {{ total }} 件）。</p>
+
+  {% if actions %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>日時</th><th>実行者</th><th>操作</th><th>対象</th><th>理由・備考</th></tr></thead>
+        <tbody>
+          {% for a in actions %}
+            <tr>
+              <td class="table__num">{{ a.created_at|jst }}</td>
+              <td>{{ admin_names.get(a.admin_user_id, '（削除済み）') }}</td>
+              <td>{{ a.action }}</td>
+              <td class="table__num">{{ a.target_type }} #{{ a.target_id }}</td>
+              <td class="table__quote">{{ a.reason }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card"><div class="empty"><p class="empty__title">操作履歴はまだありません</p></div></div>
+  {% endif %}
+
+  {% with base_url = '/admin/logs?' %}{% include "partials/pagination.html" %}{% endwith %}
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}アカウント設定 | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">アカウント設定</h1>
+  {% with active = 'settings' %}{% include "mypage/_nav.html" %}{% endwith %}
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>登録情報</h2>
+    </div>
+    <div class="card__body stack-sm">
+      <p class="field__hint">メールアドレス: <strong>{{ current_user.email }}</strong>
+        {% if current_user.email_verified %}
+          <span class="badge badge--ok">確認済み</span>
+        {% else %}
+          <span class="badge badge--danger">未確認</span>
+        {% endif %}
+      </p>
+      <p class="field__hint">このアドレスは掲示板には表示されません。管理者と本人だけが確認できます。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>パスワードの変更</h2>
+    </div>
+    <form class="card__body" action="/mypage/password" method="post" data-guard>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="field">
+        <label class="field__label" for="current_password">現在のパスワード<span class="field__required">必須</span></label>
+        <input class="input {% if errors.current_password %}input--invalid{% endif %}" type="password"
+               id="current_password" name="current_password" autocomplete="current-password" required>
+        {% if errors.current_password %}<p class="field__error">{{ errors.current_password }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="password">新しいパスワード<span class="field__required">必須</span></label>
+        <input class="input {% if errors.password %}input--invalid{% endif %}" type="password" id="password"
+               name="password" autocomplete="new-password" required minlength="{{ limits.password_min }}">
+        <p class="field__hint">{{ limits.password_min }}文字以上。英字と数字を組み合わせてください。</p>
+        {% if errors.password %}<p class="field__error">{{ errors.password }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="password_confirm">新しいパスワード（確認）<span class="field__required">必須</span></label>
+        <input class="input {% if errors.password_confirm %}input--invalid{% endif %}" type="password"
+               id="password_confirm" name="password_confirm" autocomplete="new-password" required>
+        {% if errors.password_confirm %}<p class="field__error">{{ errors.password_confirm }}</p>{% endif %}
+      </div>
+
+      <div class="notice notice--info">
+        <span class="notice__label">確認</span>
+        <span>変更すると、スマートフォンを含むすべての端末でログアウトされます。</span>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">パスワードを変更する</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="section-title"><span class="section-title__rule" aria-hidden="true"></span>アカウントの削除</h2>
+    </div>
+    <div class="card__body stack-sm">
+      <p class="field__hint">
+        アカウントを削除すると、登録メールアドレスと表示名は復元できない形に置き換えられ、二度とログインできなくなります。
+        過去の投稿はスレッドの流れを保つために残り、投稿者名は「退会したユーザー」と表示されます。
+      </p>
+      <div class="form-actions">
+        <a class="btn btn--danger" href="/mypage/delete">アカウント削除の手続きへ</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}ログイン | {{ site_name }}{% endblock %}
+{% block content %}
+<div class="auth-wrap stack">
+  <div class="auth-card">
+    <h1 class="auth-title">ログイン</h1>
+    <p class="auth-lede">登録したメールアドレスとパスワードを入力してください。</p>
+
+    {% if errors.form %}
+      <div class="notice notice--error" role="alert">
+        <span class="notice__label">エラー</span><span>{{ errors.form }}</span>
+      </div>
+    {% endif %}
+
+    <form action="/login" method="post" data-guard>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div class="field">
+        <label class="field__label" for="email">メールアドレス<span class="field__required">必須</span></label>
+        <input class="input" type="email" id="email" name="email" value="{{ form.email|default('') }}"
+               autocomplete="email" required maxlength="254" autofocus>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="password">パスワード<span class="field__required">必須</span></label>
+        <input class="input" type="password" id="password" name="password" autocomplete="current-password" required>
+        <p class="field__hint"><a href="/password/forgot">パスワードを忘れた場合</a></p>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary btn--block" type="submit" data-submitting-label="確認中…">ログイン</button>
+      </div>
+    </form>
+
+    <p class="auth-alt">
+      アカウントをお持ちでない方は <a href="/register">新規登録（無料）</a><br>
+      <span class="doc-meta">ログイン状態は30日間保持されます。共用のパソコンでは必ずログアウトしてください。</span>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+# --- Web フレームワーク本体 ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+jinja2==3.1.5
+python-multipart==0.0.20
+
+# --- データベース ---
+SQLAlchemy==2.0.36
+psycopg[binary]==3.2.3
+
+# --- 認証・セキュリティ ---
+argon2-cffi==23.1.0
+itsdangerous==2.2.0
+
+# --- 設定・外部通信 ---
+python-dotenv==1.0.1
+httpx==0.28.1

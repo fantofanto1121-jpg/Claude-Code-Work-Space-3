@@ -1,0 +1,19 @@
+{% if total_pages and total_pages > 1 %}
+<nav class="pagination" aria-label="ページ送り">
+  {% if page > 1 %}
+    <a class="pagination__link" href="{{ base_url }}page={{ page - 1 }}" rel="prev">前へ</a>
+  {% endif %}
+  {% for p in pages %}
+    {% if p is none %}
+      <span class="pagination__gap" aria-hidden="true">…</span>
+    {% elif p == page %}
+      <span class="pagination__link is-current" aria-current="page">{{ p }}</span>
+    {% else %}
+      <a class="pagination__link" href="{{ base_url }}page={{ p }}">{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page < total_pages %}
+    <a class="pagination__link" href="{{ base_url }}page={{ page + 1 }}" rel="next">次へ</a>
+  {% endif %}
+</nav>
+{% endif %}
