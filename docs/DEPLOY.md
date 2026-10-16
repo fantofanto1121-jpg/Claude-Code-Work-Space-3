@@ -129,33 +129,53 @@ git ls-files | grep -E "^\.env$"
 
 ### データベースのテーブルを作る
 
-デプロイが成功したら、テーブルを作成します。
+デプロイが成功したら、テーブルと初期カテゴリーを作ります。
 
-**方法A: Render の Shell を使う（おすすめ）**
+> **重要: Render の無料プランでは Shell（サーバー上で直接コマンドを打つ機能）が使えません。**
+> Shell と SSH は有料プラン専用です。
+> そのため無料プランでは、**自分のパソコンから Neon に直接つないで**初期化します。
+> Neon はインターネット経由でどこからでも接続できるので、これで問題なく動きます。
 
-サービスのページ左メニューから **Shell** を開き、次を実行します。
+**方法A: 自分のパソコンから実行する（無料プランはこちら）**
+
+自分のパソコンのターミナルで、プロジェクトのフォルダに移動して実行します。
+`...` の部分は、①でメモした接続URL（`postgresql+psycopg://` に書き換えたもの）に置き換えてください。
 
 ```bash
+# Mac / Linux
+DATABASE_URL="postgresql+psycopg://neondb_owner:パスワード@ep-xxxx.../neondb?sslmode=require" \
+  python scripts/init_db.py
+```
+
+```powershell
+# Windows (PowerShell)
+$env:DATABASE_URL="postgresql+psycopg://neondb_owner:パスワード@ep-xxxx.../neondb?sslmode=require"
 python scripts/init_db.py
 ```
 
 次のように表示されれば成功です。
 
 ```
+接続先: postgresql+psycopg://neondb_owner:***@ep-xxxx.../neondb
 1) テーブルを作成します… 完了
 2) マイグレーションを適用します…
 3) 初期カテゴリーを確認します… 7 件のカテゴリーを追加しました
 初期化が完了しました。
 ```
 
-**方法B: Pre-Deploy Command を設定する**
+この作業は**最初の1回だけ**です。何度実行してもデータは消えませんが、2回目以降は
+「0 件のカテゴリーを追加しました」と出るだけで何も起きません。
 
-サービスの **Settings** → **Pre-Deploy Command** に次を入れておくと、
-デプロイのたびに自動実行されます（何度実行してもデータは消えません）。
+**方法B: Pre-Deploy Command（有料プランに上げた場合）**
+
+サービスの **Settings** → **Pre-Deploy Command** に次を設定すると、
+デプロイのたびに自動実行されます。
 
 ```
 python scripts/init_db.py
 ```
+
+> この機能が無料プランで動くかは**未確認**です。無料プランのうちは方法Aを使ってください。
 
 ---
 

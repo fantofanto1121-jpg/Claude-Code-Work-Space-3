@@ -9,7 +9,10 @@ services:
     region: singapore          # 日本から最も近いリージョン
     branch: main
     buildCommand: "pip install -r requirements.txt"
-    # 起動前に init_db.py を実行して、テーブルと初期カテゴリーを用意する
+    # 起動前に init_db.py を実行して、テーブルと初期カテゴリーを用意する。
+    # 注意: 無料プランでこれが動くかは未確認です。動かない場合は、自分のパソコンから
+    #       DATABASE_URL を指定して python scripts/init_db.py を1回実行してください
+    #       （手順は docs/DEPLOY.md の「データベースのテーブルを作る」）。
     preDeployCommand: "python scripts/init_db.py"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers"
     healthCheckPath: /healthz
