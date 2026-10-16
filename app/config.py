@@ -46,6 +46,9 @@ class Settings:
 
     # --- データベース ---
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./bbs.db").strip()
+    # 起動時にテーブルと初期カテゴリーを自動で用意するか。
+    # Render の無料プランには Shell が無く、手動でコマンドを打てないため既定で有効。
+    auto_init_db: bool = _bool("AUTO_INIT_DB", True)
 
     # --- 管理者 ---
     admin_emails: tuple[str, ...] = field(default_factory=lambda: tuple(_csv("ADMIN_EMAILS")))

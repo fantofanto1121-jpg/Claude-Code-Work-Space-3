@@ -12,11 +12,8 @@ services:
     # このリポジトリの既定ブランチ。別のブランチで運用する場合は書き換える。
     branch: claude/gifted-galileo-f3ce46
     buildCommand: "pip install -r requirements.txt"
-    # 起動前に init_db.py を実行して、テーブルと初期カテゴリーを用意する。
-    # 注意: 無料プランでこれが動くかは未確認です。動かない場合は、自分のパソコンから
-    #       DATABASE_URL を指定して python scripts/init_db.py を1回実行してください
-    #       （手順は docs/DEPLOY.md の「データベースのテーブルを作る」）。
-    preDeployCommand: "python scripts/init_db.py"
+    # テーブルと初期カテゴリーはアプリ起動時に自動で用意されるため、
+    # preDeployCommand は不要です（Render 無料プランでは Shell が使えないため）。
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers"
     healthCheckPath: /healthz
     envVars:

@@ -241,7 +241,7 @@ bash scripts/restore.sh backups/bbs-日付.dump       # 復元する
 | `ModuleNotFoundError: No module named 'fastapi'` | 仮想環境が有効になっていません。`source .venv/bin/activate` を実行 |
 | `SECRET_KEY が設定されていません` | `.env` の `SECRET_KEY` が空です。手順3をやり直してください |
 | 起動するたびにログアウトされる | 同上。`SECRET_KEY` が未設定だと毎回ランダムな鍵になります |
-| `no such table: users` | `python scripts/init_db.py` を実行していません |
+| `no such table: users` | 通常は起動時に自動作成されます。`AUTO_INIT_DB=false` にしている場合は `python scripts/init_db.py` を実行してください |
 | 投稿すると「投稿の間隔が短すぎます」 | 連投制限（15秒に1回）です。仕様通りの動作です |
 | 公開URLの初回アクセスが1分くらい遅い | Render 無料プランの仕様（15分アクセスが無いと停止）。[docs/COSTS.md](docs/COSTS.md) 参照 |
 | 管理画面に入れない | `ADMIN_EMAILS` を設定後、**ログインし直し**が必要です |

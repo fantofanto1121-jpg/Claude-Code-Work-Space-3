@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -25,6 +26,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger("nextech")
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """アプリ起動時に1回だけ走る処理。
+
+    テーブルと初期カテゴリーを用意します。何度起動しても既存データは消えません。
+    Render の無料プランでは Shell が使えず、サーバー上で手動コマンドを実行できないため、
+    ここで自動的に行うようにしています。
+    （AUTO_INIT_DB=false を設定すると無効にできます）
+    """
+    if settings.auto_init_db:
+        from app.bootstrap import initialize
+
+        initialize()
+    else:
+        logger.info("AUTO_INIT_DB=false のため、DBの自動初期化を行いません。")
+    yield
+
 app = FastAPI(
     title=settings.site_name,
     docs_url=None,  # 自動APIドキュメントは公開しない
@@ -32,6 +51,7 @@ app = FastAPI(
     openapi_url=None,
     # 全リクエストでログイン状態を1回だけ解決する（結果はリクエスト内で使い回される）
     dependencies=[Depends(get_current_user)],
+    lifespan=lifespan,
 )
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "app" / "static")), name="static")

@@ -120,6 +120,7 @@ git ls-files | grep -E "^\.env$"
    | `ADMIN_EMAILS` | 自分のメールアドレス |
    | `PYTHON_VERSION` | `3.12.7` |
    | `REQUIRE_EMAIL_VERIFICATION` | `false` |
+   | `AUTO_INIT_DB` | `true`（省略可。既定で有効） |
 
    メール送信を使う場合のみ、追加で `RESEND_API_KEY` と `MAIL_FROM` を設定します。
 
@@ -134,55 +135,35 @@ git ls-files | grep -E "^\.env$"
 
 6. **Create Web Service** を押します。初回のビルドに3〜5分かかります。
 
-### データベースのテーブルを作る
+### データベースのテーブルを作る → **自動です。何もしなくて構いません**
 
-デプロイが成功したら、テーブルと初期カテゴリーを作ります。
+アプリは起動時に、テーブルと初期カテゴリーを自動で用意します。
+デプロイが成功した時点で、掲示板はそのまま使える状態になっています。
 
-> **重要: Render の無料プランでは Shell（サーバー上で直接コマンドを打つ機能）が使えません。**
-> Shell と SSH は有料プラン専用です。
-> そのため無料プランでは、**自分のパソコンから Neon に直接つないで**初期化します。
-> Neon はインターネット経由でどこからでも接続できるので、これで問題なく動きます。
+Render の **Logs** に次の行が出ていれば成功です。
 
-**方法A: 自分のパソコンから実行する（無料プランはこちら）**
+```
+nextech.bootstrap: データベースの準備が完了しました（カテゴリーを 7 件追加）
+INFO:     Application startup complete.
+```
 
-自分のパソコンのターミナルで、プロジェクトのフォルダに移動して実行します。
-`...` の部分は、①でメモした接続URL（`postgresql+psycopg://` に書き換えたもの）に置き換えてください。
+2回目以降のデプロイでは「カテゴリーを 0 件追加」と出ます。
+既存のデータは消えず、同じカテゴリーが重複して増えることもありません。
+
+> **なぜ自動にしているか**
+> Render の無料プランには Shell（サーバー上でコマンドを打つ機能）がありません。
+> Shell と SSH は有料プラン専用です。そのため、サーバー上で初期化コマンドを
+> 実行する手段が無く、アプリ自身が起動時に行う方式にしています。
+
+**手動で実行したい場合（任意）**
+
+ローカル開発で先に準備しておきたいときなどは、従来どおり実行できます。
 
 ```bash
-# Mac / Linux
-DATABASE_URL="postgresql+psycopg://neondb_owner:パスワード@ep-xxxx.../neondb?sslmode=require" \
-  python scripts/init_db.py
-```
-
-```powershell
-# Windows (PowerShell)
-$env:DATABASE_URL="postgresql+psycopg://neondb_owner:パスワード@ep-xxxx.../neondb?sslmode=require"
 python scripts/init_db.py
 ```
 
-次のように表示されれば成功です。
-
-```
-接続先: postgresql+psycopg://neondb_owner:***@ep-xxxx.../neondb
-1) テーブルを作成します… 完了
-2) マイグレーションを適用します…
-3) 初期カテゴリーを確認します… 7 件のカテゴリーを追加しました
-初期化が完了しました。
-```
-
-この作業は**最初の1回だけ**です。何度実行してもデータは消えませんが、2回目以降は
-「0 件のカテゴリーを追加しました」と出るだけで何も起きません。
-
-**方法B: Pre-Deploy Command（有料プランに上げた場合）**
-
-サービスの **Settings** → **Pre-Deploy Command** に次を設定すると、
-デプロイのたびに自動実行されます。
-
-```
-python scripts/init_db.py
-```
-
-> この機能が無料プランで動くかは**未確認**です。無料プランのうちは方法Aを使ってください。
+自動初期化を止めたい場合は、環境変数 `AUTO_INIT_DB` に `false` を設定してください。
 
 ---
 
