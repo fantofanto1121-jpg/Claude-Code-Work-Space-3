@@ -1,0 +1,362 @@
+/* ===========================================================
+   スライム・スリング  —  UI スタイル
+   =========================================================== */
+
+:root{
+  --ink:        #0b1f33;
+  --panel:      rgba(14, 32, 56, .82);
+  --panel-2:    rgba(22, 48, 80, .72);
+  --edge:       rgba(150, 200, 245, .55);
+  --edge-soft:  rgba(255, 255, 255, .16);
+  --gold:       #e6c15f;
+  --gold-deep:  #8d6a1c;
+  --aqua:       #8fd7f6;
+  --aqua-deep:  #2f9ad9;
+  --text:       #eaf3fb;
+  --text-dim:   #b9cfe4;
+  --hp:         #e0524f;
+  --hp-dark:    #6d1f1e;
+}
+
+*{ box-sizing: border-box; }
+
+html, body{
+  margin: 0;
+  height: 100%;
+  background: #05101c;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic UI",
+               "Yu Gothic", "Meiryo", system-ui, -apple-system, sans-serif;
+}
+
+body{
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- ステージ（3:2 の箱。中身はすべて cqw でスケール） ---------- */
+.stage{
+  position: relative;
+  width: min(100vw, 150vh);
+  height: min(66.6667vw, 100vh);
+  container-type: size;
+  container-name: stage;
+  overflow: hidden;
+  background: #0a1a2c;
+  box-shadow: 0 .6cqw 3cqw rgba(0,0,0,.55);
+  touch-action: none;
+  user-select: none;
+}
+
+.game-canvas{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hud{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-size: 1cqw;
+}
+
+/* ---------- 共通パネル ---------- */
+.panel{
+  position: absolute;
+  background:
+    linear-gradient(180deg, rgba(40,78,122,.55), rgba(8,22,40,.2)),
+    var(--panel);
+  border: .14cqw solid var(--edge);
+  border-radius: .9cqw;
+  box-shadow:
+    0 .35cqw 1.2cqw rgba(0,0,0,.42),
+    inset 0 .12cqw 0 var(--edge-soft),
+    inset 0 -.25cqw .6cqw rgba(0,0,0,.28);
+  color: var(--text);
+  backdrop-filter: blur(.3cqw);
+}
+
+/* ---------- 左上：ステータス ---------- */
+.status{
+  top: 1.6cqw; left: 1.6cqw;
+  display: flex; align-items: center; gap: .9cqw;
+  padding: .7cqw 1.4cqw .7cqw .8cqw;
+  border-radius: 1.1cqw;
+}
+.portrait{ position: relative; width: 5.2cqw; height: 5.2cqw; flex: none; }
+.portrait svg{
+  width: 100%; height: 100%;
+  background: radial-gradient(circle at 50% 38%, #bfe6ff 0%, #6fb6e2 65%, #2b6a9b 100%);
+  border: .16cqw solid var(--edge);
+  border-radius: .8cqw;
+  box-shadow: inset 0 .2cqw .5cqw rgba(255,255,255,.28);
+}
+.portrait .lv{
+  position: absolute; left: 50%; bottom: -.9cqw; transform: translateX(-50%);
+  font-size: 1.25cqw; font-weight: 700; letter-spacing: .02em;
+  padding: .1cqw .6cqw; border-radius: .5cqw;
+  background: linear-gradient(180deg, #2a4f7c, #10243d);
+  border: .12cqw solid var(--edge);
+  white-space: nowrap;
+}
+.vitals{ display: flex; flex-direction: column; gap: .45cqw; }
+.hearts{ display: flex; gap: .35cqw; height: 2.1cqw; }
+.hearts svg{ width: 2.1cqw; height: 2.1cqw; filter: drop-shadow(0 .12cqw .2cqw rgba(0,0,0,.45)); }
+.hearts svg .fill{ transition: opacity .18s ease, transform .18s ease; }
+.hearts svg.empty .fill{ opacity: .13; transform-origin: center; transform: scale(.82); }
+
+.xpbar{
+  position: relative;
+  width: 17cqw; height: 1.5cqw;
+  border-radius: .75cqw;
+  background: linear-gradient(180deg, #0a1b2d, #123150);
+  border: .12cqw solid var(--edge);
+  overflow: hidden;
+  box-shadow: inset 0 .15cqw .35cqw rgba(0,0,0,.5);
+}
+.xpbar i{
+  position: absolute; inset: .14cqw;
+  width: 24%;
+  border-radius: .6cqw;
+  background: linear-gradient(180deg, #a9e7ff, #3ba2e0 55%, #1d7cb6);
+  box-shadow: inset 0 .18cqw 0 rgba(255,255,255,.45);
+  transition: width .25s ease;
+}
+.xpbar span{
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: .95cqw; letter-spacing: .04em;
+  color: #eaf6ff; text-shadow: 0 .1cqw .2cqw rgba(0,0,0,.75);
+}
+
+/* ---------- 右上：クエスト + ミニマップ ---------- */
+.quest-wrap{
+  position: absolute; top: 1.6cqw; right: 1.6cqw;
+  display: flex; align-items: flex-start; gap: 1cqw;
+}
+.quest{
+  position: static;
+  min-width: 27cqw;
+  padding: .7cqw 1cqw .8cqw;
+}
+.quest-head{
+  display: flex; align-items: center; gap: .9cqw;
+  padding-bottom: .5cqw; margin-bottom: .5cqw;
+  border-bottom: .1cqw solid rgba(160,205,245,.3);
+}
+.stage-no{
+  font-size: 1.4cqw; font-weight: 700;
+  padding: .12cqw .7cqw; border-radius: .45cqw;
+  background: linear-gradient(180deg, #30598a, #142c49);
+  border: .1cqw solid var(--edge);
+}
+.stage-name{ font-size: 1.35cqw; color: #dfeefc; letter-spacing: .04em; }
+.quest-line{ display: flex; align-items: center; gap: .55cqw; font-size: 1.22cqw; }
+.quest-line .gem{ width: 1.55cqw; height: 1.55cqw; flex: none; }
+.quest-line .count{ margin-left: auto; font-weight: 700; }
+.quest-line .count em{ font-style: normal; font-size: 1.55cqw; color: #fff; }
+.quest-line .count span{ font-size: 1.1cqw; color: var(--text-dim); }
+
+.minimap{
+  position: relative;
+  width: 8.6cqw; height: 8.6cqw; flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, rgba(30,62,98,.95), rgba(7,18,32,.95));
+  border: .18cqw solid var(--edge);
+  box-shadow: 0 .35cqw 1cqw rgba(0,0,0,.45), inset 0 .2cqw .5cqw rgba(0,0,0,.5);
+  overflow: hidden;
+}
+.minimap canvas{ width: 100%; height: 100%; display: block; }
+.minimap .north{
+  position: absolute; top: .25cqw; left: 50%; transform: translateX(-50%);
+  font-size: .95cqw; font-weight: 700; color: #cfe6fa;
+  text-shadow: 0 .1cqw .2cqw rgba(0,0,0,.8);
+}
+
+/* ---------- 左下：チュートリアル ---------- */
+.tutorial{
+  left: 1.6cqw; bottom: 1.6cqw;
+  padding: .75cqw 1.3cqw 1cqw;
+  min-width: 25cqw;
+  transition: opacity .5s ease, transform .5s ease;
+}
+.tutorial.hide{ opacity: 0; transform: translateY(1cqw); }
+.tut-head{
+  display: flex; align-items: center; gap: .6cqw;
+  font-size: 1.5cqw; font-weight: 700;
+  padding-bottom: .5cqw; margin-bottom: .45cqw;
+  border-bottom: .1cqw solid rgba(160,205,245,.3);
+}
+.tut-slime{ width: 2cqw; height: 2cqw; }
+.tutorial ol{ margin: 0; padding: 0; list-style: none; display: grid; gap: .35cqw; }
+.tutorial li{ display: flex; align-items: center; gap: .6cqw; font-size: 1.22cqw; color: #e6f2fc; }
+.tutorial li i{
+  width: 1.7cqw; height: 1.7cqw; flex: none;
+  display: grid; place-items: center;
+  font-style: normal; font-size: 1.05cqw; font-weight: 700;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #4e90c8, #1d5584);
+  border: .1cqw solid rgba(200,230,255,.6);
+}
+
+/* ---------- 右下：アクション ---------- */
+.actions{
+  position: absolute; right: 2cqw; bottom: 1.8cqw;
+  display: flex; align-items: flex-end; gap: 1.1cqw;
+  pointer-events: auto;
+}
+.act{
+  position: relative;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: .16cqw solid var(--edge);
+  background: radial-gradient(circle at 50% 32%, rgba(58,106,156,.9), rgba(12,28,48,.92));
+  box-shadow: 0 .35cqw 1cqw rgba(0,0,0,.45), inset 0 .2cqw .4cqw rgba(255,255,255,.18);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+  transition: transform .12s ease, box-shadow .15s ease, opacity .2s ease;
+}
+.act:active{ transform: translateY(.2cqw) scale(.97); }
+.act svg{ width: 55%; height: 55%; }
+.act em{
+  position: absolute; bottom: -1.7cqw; left: 50%; transform: translateX(-50%);
+  font-style: normal; font-size: 1.05cqw; color: #dcebf8; white-space: nowrap;
+  text-shadow: 0 .12cqw .25cqw rgba(0,0,0,.8);
+}
+.act.special{ width: 5.6cqw; height: 5.6cqw; opacity: .62; }
+.act.special.ready{
+  opacity: 1;
+  box-shadow: 0 .35cqw 1cqw rgba(0,0,0,.45), 0 0 1.4cqw rgba(140,205,250,.5),
+              inset 0 .2cqw .4cqw rgba(255,255,255,.22);
+}
+.act.special .ring{
+  position: absolute; inset: -.5cqw;
+  border-radius: 50%;
+  border: .25cqw solid rgba(150,200,240,.22);
+  overflow: hidden;
+}
+.act.special .ring i{
+  position: absolute; left: 0; bottom: 0; width: 100%;
+  height: 0%;
+  background: linear-gradient(180deg, rgba(150,215,255,.45), rgba(90,170,225,.12));
+  transition: height .2s ease;
+}
+.act.main{
+  width: 8.4cqw; height: 8.4cqw;
+  background: radial-gradient(circle at 50% 30%, rgba(126,196,240,.95), rgba(26,76,124,.95));
+  border-color: rgba(205,235,255,.8);
+  box-shadow: 0 .4cqw 1.2cqw rgba(0,0,0,.5), 0 0 1.8cqw rgba(120,195,245,.35),
+              inset 0 .25cqw .5cqw rgba(255,255,255,.3);
+}
+.act.main::after{
+  content: ""; position: absolute; inset: -.9cqw;
+  border-radius: 50%;
+  border: .22cqw solid rgba(170,220,255,.45);
+}
+.act.potion{ width: 5.4cqw; height: 5.4cqw; }
+.act.potion.empty{ opacity: .45; }
+.act.potion .x{
+  position: absolute; right: -.1cqw; bottom: -.1cqw;
+  font-size: 1.1cqw; font-weight: 700;
+  padding: 0 .4cqw; border-radius: .5cqw;
+  background: linear-gradient(180deg, #2c5684, #12283f);
+  border: .1cqw solid var(--edge);
+  transform: none; left: auto;
+}
+
+/* ---------- システムボタン ---------- */
+.sys{
+  position: absolute; top: 12.4cqw; right: 1.6cqw;
+  display: flex; flex-direction: column; gap: .5cqw; align-items: flex-end;
+  pointer-events: auto;
+}
+.chip{
+  font-family: inherit;
+  font-size: 1.02cqw; color: var(--text-dim);
+  padding: .25cqw .8cqw;
+  border-radius: .6cqw;
+  background: rgba(10,26,46,.7);
+  border: .1cqw solid rgba(150,200,245,.35);
+  cursor: pointer;
+}
+.chip:hover{ color: #fff; border-color: var(--edge); }
+
+/* ---------- 中央ヒント ---------- */
+.hint{
+  position: absolute; left: 50%; top: 13cqw; transform: translateX(-50%);
+  font-size: 1.5cqw; font-weight: 700; color: #fff;
+  text-shadow: 0 .15cqw .4cqw rgba(0,0,0,.8);
+  padding: .3cqw 1.2cqw;
+  border-radius: .7cqw;
+  background: rgba(10,26,46,.6);
+  border: .1cqw solid rgba(160,205,245,.4);
+  opacity: 0;
+  transition: opacity .3s ease;
+  white-space: nowrap;
+}
+.hint.show{ opacity: 1; }
+
+/* ---------- オーバーレイ ---------- */
+.overlay{
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 45%, rgba(8,22,40,.55), rgba(4,12,22,.86));
+  pointer-events: auto;
+  animation: fade .3s ease;
+}
+.overlay[hidden]{ display: none; }
+@keyframes fade{ from{ opacity: 0 } to{ opacity: 1 } }
+.dialog{
+  width: 44cqw;
+  padding: 2.4cqw 2.6cqw 2cqw;
+  text-align: center;
+  color: var(--text);
+  border-radius: 1.4cqw;
+  background:
+    linear-gradient(180deg, rgba(48,90,138,.6), rgba(10,26,46,.35)),
+    rgba(12,30,52,.93);
+  border: .2cqw solid var(--edge);
+  box-shadow: 0 1cqw 3cqw rgba(0,0,0,.6), inset 0 .2cqw 0 var(--edge-soft);
+}
+.dialog h1{
+  margin: 0 0 .6cqw;
+  font-size: 3.2cqw; letter-spacing: .06em;
+  color: #fff;
+  text-shadow: 0 .2cqw .5cqw rgba(0,0,0,.6);
+}
+.dialog h1 .sub{ display: block; font-size: 1.3cqw; color: var(--gold); letter-spacing: .2em; margin-bottom: .3cqw; }
+.dialog p{ margin: 0 0 1.2cqw; font-size: 1.35cqw; color: var(--text-dim); line-height: 1.7; }
+.ov-stats{
+  display: flex; justify-content: center; gap: 2.4cqw;
+  margin-bottom: 1.6cqw;
+  font-size: 1.2cqw; color: var(--text-dim);
+}
+.ov-stats b{ display: block; font-size: 1.9cqw; color: #fff; }
+.ov-buttons{ display: flex; justify-content: center; gap: 1cqw; }
+.btn{
+  font-family: inherit;
+  font-size: 1.4cqw; font-weight: 700; color: var(--text);
+  padding: .7cqw 2cqw;
+  border-radius: .8cqw;
+  border: .14cqw solid var(--edge);
+  background: linear-gradient(180deg, #2b5684, #0f2740);
+  cursor: pointer;
+  box-shadow: 0 .3cqw .8cqw rgba(0,0,0,.4), inset 0 .15cqw 0 rgba(255,255,255,.18);
+}
+.btn.primary{
+  background: linear-gradient(180deg, #e8cc74, #b48a2a);
+  color: #30230a;
+  border-color: #f2e1a6;
+}
+.btn:active{ transform: translateY(.15cqw); }
+
+/* ---------- 縦画面の案内 ---------- */
+@media (max-aspect-ratio: 1/1){
+  .stage{ width: 100vw; height: 66.667vw; }
+}
