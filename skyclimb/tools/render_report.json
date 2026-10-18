@@ -1,0 +1,443 @@
+[
+  {
+    "name": "slime_idle",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 28289
+  },
+  {
+    "name": "slime_drag",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 30394
+  },
+  {
+    "name": "slime_launch",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 27921
+  },
+  {
+    "name": "slime_fly",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 25075
+  },
+  {
+    "name": "slime_fall",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 23858
+  },
+  {
+    "name": "slime_land",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 25981
+  },
+  {
+    "name": "slime_blink",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 28383
+  },
+  {
+    "name": "slime_damage",
+    "dir": "sprites/slime",
+    "w": 192,
+    "h": 192,
+    "bytes": 29233
+  },
+  {
+    "name": "slime_icon",
+    "dir": "sprites/slime",
+    "w": 96,
+    "h": 96,
+    "bytes": 12546
+  },
+  {
+    "name": "fx_drag_line",
+    "dir": "sprites/effects",
+    "w": 256,
+    "h": 32,
+    "bytes": 3036
+  },
+  {
+    "name": "fx_trajectory_dot",
+    "dir": "sprites/effects",
+    "w": 32,
+    "h": 32,
+    "bytes": 1902
+  },
+  {
+    "name": "fx_launch_streak",
+    "dir": "sprites/effects",
+    "w": 256,
+    "h": 96,
+    "bytes": 12788
+  },
+  {
+    "name": "fx_land_dust",
+    "dir": "sprites/effects",
+    "w": 256,
+    "h": 96,
+    "bytes": 33493
+  },
+  {
+    "name": "fx_land_star",
+    "dir": "sprites/effects",
+    "w": 64,
+    "h": 64,
+    "bytes": 6010
+  },
+  {
+    "name": "fx_splash",
+    "dir": "sprites/effects",
+    "w": 256,
+    "h": 96,
+    "bytes": 11478
+  },
+  {
+    "name": "fx_checkpoint",
+    "dir": "sprites/effects",
+    "w": 192,
+    "h": 192,
+    "bytes": 51420
+  },
+  {
+    "name": "fx_fall",
+    "dir": "sprites/effects",
+    "w": 128,
+    "h": 128,
+    "bytes": 4479
+  },
+  {
+    "name": "platform_grass_small",
+    "dir": "sprites/platforms",
+    "w": 192,
+    "h": 128,
+    "bytes": 33491
+  },
+  {
+    "name": "platform_grass_medium",
+    "dir": "sprites/platforms",
+    "w": 320,
+    "h": 148,
+    "bytes": 56582
+  },
+  {
+    "name": "platform_grass_wide",
+    "dir": "sprites/platforms",
+    "w": 480,
+    "h": 164,
+    "bytes": 94731
+  },
+  {
+    "name": "platform_stone",
+    "dir": "sprites/platforms",
+    "w": 320,
+    "h": 140,
+    "bytes": 49417
+  },
+  {
+    "name": "platform_wood",
+    "dir": "sprites/platforms",
+    "w": 288,
+    "h": 104,
+    "bytes": 27525
+  },
+  {
+    "name": "platform_floating_rock",
+    "dir": "sprites/platforms",
+    "w": 256,
+    "h": 208,
+    "bytes": 62868
+  },
+  {
+    "name": "platform_broken_ruin",
+    "dir": "sprites/platforms",
+    "w": 320,
+    "h": 156,
+    "bytes": 50415
+  },
+  {
+    "name": "platform_mushroom",
+    "dir": "sprites/platforms",
+    "w": 224,
+    "h": 168,
+    "bytes": 30245
+  },
+  {
+    "name": "platform_moving",
+    "dir": "sprites/platforms",
+    "w": 256,
+    "h": 120,
+    "bytes": 29571
+  },
+  {
+    "name": "platform_checkpoint",
+    "dir": "sprites/platforms",
+    "w": 288,
+    "h": 184,
+    "bytes": 51350
+  },
+  {
+    "name": "bg_sky",
+    "dir": "backgrounds/sky",
+    "w": 1024,
+    "h": 1024,
+    "bytes": 740977
+  },
+  {
+    "name": "bg_far_mountains",
+    "dir": "backgrounds/far",
+    "w": 1536,
+    "h": 512,
+    "bytes": 107030
+  },
+  {
+    "name": "bg_floating_islands_far",
+    "dir": "backgrounds/far",
+    "w": 1536,
+    "h": 768,
+    "bytes": 201265
+  },
+  {
+    "name": "bg_castle",
+    "dir": "backgrounds/far",
+    "w": 768,
+    "h": 512,
+    "bytes": 327673
+  },
+  {
+    "name": "bg_waterfall",
+    "dir": "backgrounds/mid",
+    "w": 256,
+    "h": 768,
+    "bytes": 97694
+  },
+  {
+    "name": "bg_clouds_mid",
+    "dir": "backgrounds/mid",
+    "w": 1536,
+    "h": 512,
+    "bytes": 72527
+  },
+  {
+    "name": "bg_floating_islands_mid",
+    "dir": "backgrounds/mid",
+    "w": 1536,
+    "h": 768,
+    "bytes": 418985
+  },
+  {
+    "name": "bg_vines",
+    "dir": "backgrounds/near",
+    "w": 512,
+    "h": 512,
+    "bytes": 122306
+  },
+  {
+    "name": "bg_forest_decoration",
+    "dir": "backgrounds/near",
+    "w": 1024,
+    "h": 384,
+    "bytes": 334829
+  },
+  {
+    "name": "bg_ruins_decoration",
+    "dir": "backgrounds/near",
+    "w": 768,
+    "h": 384,
+    "bytes": 88019
+  },
+  {
+    "name": "prop_wood_sign",
+    "dir": "sprites/props",
+    "w": 160,
+    "h": 160,
+    "bytes": 17924
+  },
+  {
+    "name": "prop_lantern",
+    "dir": "sprites/props",
+    "w": 96,
+    "h": 160,
+    "bytes": 16132
+  },
+  {
+    "name": "prop_flag",
+    "dir": "sprites/props",
+    "w": 128,
+    "h": 192,
+    "bytes": 16797
+  },
+  {
+    "name": "prop_chest",
+    "dir": "sprites/props",
+    "w": 160,
+    "h": 128,
+    "bytes": 19862
+  },
+  {
+    "name": "prop_crystal",
+    "dir": "sprites/props",
+    "w": 96,
+    "h": 128,
+    "bytes": 16085
+  },
+  {
+    "name": "prop_flower",
+    "dir": "sprites/props",
+    "w": 64,
+    "h": 64,
+    "bytes": 4899
+  },
+  {
+    "name": "prop_bush",
+    "dir": "sprites/props",
+    "w": 160,
+    "h": 96,
+    "bytes": 19363
+  },
+  {
+    "name": "prop_rock",
+    "dir": "sprites/props",
+    "w": 96,
+    "h": 64,
+    "bytes": 8396
+  },
+  {
+    "name": "prop_vine",
+    "dir": "sprites/props",
+    "w": 96,
+    "h": 256,
+    "bytes": 18400
+  },
+  {
+    "name": "prop_checkpoint_flag",
+    "dir": "sprites/props",
+    "w": 128,
+    "h": 192,
+    "bytes": 16762
+  },
+  {
+    "name": "ui_heart_full",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 4882
+  },
+  {
+    "name": "ui_heart_empty",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 4579
+  },
+  {
+    "name": "ui_energy_bar",
+    "dir": "sprites/ui",
+    "w": 320,
+    "h": 48,
+    "bytes": 19509
+  },
+  {
+    "name": "ui_energy_fill",
+    "dir": "sprites/ui",
+    "w": 300,
+    "h": 32,
+    "bytes": 13712
+  },
+  {
+    "name": "ui_panel",
+    "dir": "sprites/ui",
+    "w": 512,
+    "h": 256,
+    "bytes": 165114
+  },
+  {
+    "name": "ui_button_normal",
+    "dir": "sprites/ui",
+    "w": 256,
+    "h": 96,
+    "bytes": 28991
+  },
+  {
+    "name": "ui_button_pressed",
+    "dir": "sprites/ui",
+    "w": 256,
+    "h": 96,
+    "bytes": 23130
+  },
+  {
+    "name": "ui_pause",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 7469
+  },
+  {
+    "name": "ui_height_marker",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 7732
+  },
+  {
+    "name": "ui_checkpoint",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 7637
+  },
+  {
+    "name": "ui_coin",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 7051
+  },
+  {
+    "name": "ui_crystal",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 6045
+  },
+  {
+    "name": "ui_settings",
+    "dir": "sprites/ui",
+    "w": 64,
+    "h": 64,
+    "bytes": 8467
+  },
+  {
+    "name": "logo_slime_adventure",
+    "dir": "sprites/title",
+    "w": 768,
+    "h": 256,
+    "bytes": 267755
+  },
+  {
+    "name": "title_slime_pose",
+    "dir": "sprites/title",
+    "w": 384,
+    "h": 384,
+    "bytes": 145053
+  },
+  {
+    "name": "title_decoration",
+    "dir": "sprites/title",
+    "w": 512,
+    "h": 256,
+    "bytes": 43935
+  }
+]
