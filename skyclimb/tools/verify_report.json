@@ -8,23 +8,23 @@
     "alpha_channel": true,
     "alpha_min": 0,
     "alpha_max": 255,
-    "transparent_px": 145267,
-    "semi_px": 18659,
-    "opaque_px": 229290,
-    "transparent_ratio": 0.3694,
+    "transparent_px": 145590,
+    "semi_px": 3915,
+    "opaque_px": 243711,
+    "transparent_ratio": 0.3703,
     "content_bbox": [
       0,
-      89,
+      96,
       1024,
       384
     ],
     "empty_margin_lrtb": [
       0,
-      89,
+      96,
       0,
       0
     ],
-    "bytes": 500692
+    "bytes": 334829
   },
   {
     "file": "backgrounds/near/bg_ruins_decoration.png",
@@ -170,10 +170,10 @@
     "alpha_channel": true,
     "alpha_min": 0,
     "alpha_max": 255,
-    "transparent_px": 1104941,
-    "semi_px": 10986,
-    "opaque_px": 63721,
-    "transparent_ratio": 0.9367,
+    "transparent_px": 1106006,
+    "semi_px": 8846,
+    "opaque_px": 64796,
+    "transparent_ratio": 0.9376,
     "content_bbox": [
       87,
       71,
@@ -186,7 +186,7 @@
       57,
       287
     ],
-    "bytes": 205804
+    "bytes": 201265
   },
   {
     "file": "backgrounds/mid/bg_clouds_mid.png",
@@ -224,23 +224,23 @@
     "alpha_channel": true,
     "alpha_min": 0,
     "alpha_max": 255,
-    "transparent_px": 982647,
-    "semi_px": 21365,
-    "opaque_px": 175636,
-    "transparent_ratio": 0.833,
+    "transparent_px": 985883,
+    "semi_px": 13637,
+    "opaque_px": 180128,
+    "transparent_ratio": 0.8357,
     "content_bbox": [
       0,
-      91,
+      94,
       1536,
       543
     ],
     "empty_margin_lrtb": [
       0,
-      91,
+      94,
       0,
       225
     ],
-    "bytes": 450555
+    "bytes": 418985
   },
   {
     "file": "backgrounds/mid/bg_waterfall.png",
@@ -872,23 +872,23 @@
     "alpha_channel": true,
     "alpha_min": 0,
     "alpha_max": 255,
-    "transparent_px": 112995,
-    "semi_px": 5457,
-    "opaque_px": 12620,
-    "transparent_ratio": 0.8621,
+    "transparent_px": 114136,
+    "semi_px": 3814,
+    "opaque_px": 13122,
+    "transparent_ratio": 0.8708,
     "content_bbox": [
-      27,
+      26,
       24,
       486,
-      252
+      251
     ],
     "empty_margin_lrtb": [
-      27,
+      26,
       24,
       26,
-      4
+      5
     ],
-    "bytes": 52199
+    "bytes": 43935
   },
   {
     "file": "sprites/title/title_slime_pose.png",
@@ -1061,10 +1061,10 @@
     "alpha_channel": true,
     "alpha_min": 0,
     "alpha_max": 255,
-    "transparent_px": 31198,
-    "semi_px": 3787,
-    "opaque_px": 43735,
-    "transparent_ratio": 0.3963,
+    "transparent_px": 31172,
+    "semi_px": 3623,
+    "opaque_px": 43925,
+    "transparent_ratio": 0.396,
     "content_bbox": [
       11,
       7,
@@ -1077,7 +1077,7 @@
       7,
       14
     ],
-    "bytes": 96530
+    "bytes": 94731
   },
   {
     "file": "sprites/platforms/platform_moving.png",
@@ -1439,23 +1439,23 @@
     "alpha_channel": true,
     "alpha_min": 0,
     "alpha_max": 255,
-    "transparent_px": 5326,
-    "semi_px": 1848,
-    "opaque_px": 8186,
-    "transparent_ratio": 0.3467,
+    "transparent_px": 5486,
+    "semi_px": 1033,
+    "opaque_px": 8841,
+    "transparent_ratio": 0.3572,
     "content_bbox": [
-      6,
+      4,
       12,
-      152,
+      146,
       96
     ],
     "empty_margin_lrtb": [
-      6,
+      4,
       12,
-      8,
+      14,
       0
     ],
-    "bytes": 24428
+    "bytes": 19363
   },
   {
     "file": "sprites/props/prop_checkpoint_flag.png",
