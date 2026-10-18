@@ -78,7 +78,7 @@ const STAGES = [
       P('floating_rock', 960, 395),
       P('grass_wide', 1340, 560, { ground: true }),
       P('wood', 1660, 440),
-      P('grass_medium', 1980, 520),
+      P('checkpoint', 1980, 520, { checkpoint: true }),
       P('mushroom', 2230, 470),
       P('grass_wide', 2600, 560, { ground: true }),
       P('stone', 2940, 450),
@@ -96,7 +96,7 @@ const STAGES = [
       D('prop_wood_sign', 140, 560, 0.9), D('prop_bush', 420, 560, 0.9),
       D('prop_flower', 520, 560, 1), D('prop_rock', 600, 505, 1),
       D('prop_lantern', 1230, 560, 0.9), D('prop_bush', 1500, 560, 0.85),
-      D('prop_flower', 2060, 520, 1), D('prop_flag', 2520, 560, 0.9),
+      D('prop_checkpoint_flag', 2060, 520, 0.8), D('prop_flag', 2520, 560, 0.9),
       D('prop_bush', 2860, 560, 0.9), D('prop_vine', 3300, 535, 0.5),
       D('prop_chest', 3820, 560, 0.8), D('prop_bush', 3620, 560, 0.9)
     ],
@@ -113,12 +113,12 @@ const STAGES = [
       P('wood', 620, 470),
       P('floating_rock', 900, 380),
       P('wood', 1180, 470),
-      P('grass_medium', 1520, 545),
+      P('checkpoint', 1520, 545, { checkpoint: true }),
       P('broken_ruin', 1860, 455),
       P('stone', 2180, 540),
       P('mushroom', 2440, 480),
       P('floating_rock', 2740, 360),
-      P('grass_medium', 3060, 530),
+      P('checkpoint', 3060, 530, { checkpoint: true }),
       P('wood', 3380, 430),
       P('grass_wide', 3800, 550, { ground: true }),
       P('stone', 4240, 470)
@@ -134,9 +134,9 @@ const STAGES = [
     ],
     props: [
       D('prop_wood_sign', 130, 550, 0.9), D('prop_bush', 400, 550, 0.9),
-      D('prop_lantern', 640, 470, 0.85), D('prop_flower', 1540, 545, 1),
+      D('prop_lantern', 640, 470, 0.85), D('prop_checkpoint_flag', 1600, 545, 0.8),
       D('prop_vine', 1880, 455, 0.5), D('prop_rock', 2200, 540, 1),
-      D('prop_flag', 3080, 530, 0.9), D('prop_bush', 3760, 550, 0.9),
+      D('prop_checkpoint_flag', 3140, 530, 0.8), D('prop_bush', 3760, 550, 0.9),
       D('prop_chest', 4280, 470, 0.8), D('prop_crystal', 2760, 360, 0.6)
     ],
     coins: [[620, 390], [900, 290], [1180, 390], [1880, 370], [2440, 390], [2760, 270], [3380, 350], [3900, 460]],
@@ -153,12 +153,12 @@ const STAGES = [
       P('floating_rock', 900, 380),
       P('broken_ruin', 1220, 490),
       P('moving', 1520, 400, { moveAmp: 110, moveSpd: 0.7 }),
-      P('stone', 1860, 530),
+      P('checkpoint', 1860, 530, { checkpoint: true }),
       P('mushroom', 2120, 470),
       P('floating_rock', 2420, 360),
       P('broken_ruin', 2720, 500),
       P('moving', 3020, 430, { moveAmp: 130, moveSpd: 0.55 }),
-      P('grass_medium', 3340, 540),
+      P('checkpoint', 3340, 540, { checkpoint: true }),
       P('grass_wide', 3900, 570, { ground: true }),
       P('grass_wide', 4400, 570, { ground: true })
     ],
@@ -174,9 +174,9 @@ const STAGES = [
     props: [
       D('prop_wood_sign', 140, 580, 0.9), D('prop_flag', 420, 580, 0.95),
       D('prop_lantern', 640, 490, 0.85), D('prop_vine', 1240, 490, 0.5),
-      D('prop_bush', 1880, 530, 0.9), D('prop_crystal', 2440, 360, 0.6),
+      D('prop_checkpoint_flag', 1930, 530, 0.8), D('prop_crystal', 2440, 360, 0.6),
       D('prop_flag', 3920, 570, 1.05), D('prop_chest', 4620, 570, 0.85),
-      D('prop_bush', 3360, 540, 0.85), D('prop_flower', 4480, 570, 1)
+      D('prop_checkpoint_flag', 3400, 540, 0.8), D('prop_flower', 4480, 570, 1)
     ],
     coins: [[620, 400], [900, 290], [1520, 310], [2120, 380], [2420, 270], [3020, 340], [3360, 450], [4000, 480]],
     crystals: [[1540, 280], [2440, 250], [3040, 310]]
@@ -200,8 +200,12 @@ function buildStage(index) {
       vy: 0, hopT: 0.6 + i * 0.25, squashT: 0, attack: 0, hitT: 0, hitCd: 0
     };
   });
+  let groundY = 0;
+  platforms.forEach(function (p) { if (p.ground) groundY = Math.max(groundY, p.y); });
+  if (!groundY) groundY = 560;
+
   return {
-    no: st.no, name: st.name, width: st.width, deathY: st.deathY,
+    no: st.no, name: st.name, width: st.width, deathY: st.deathY, groundY: groundY,
     spawn: st.spawn, hint: st.hint, seed: st.seed,
     platforms: platforms, enemies: enemies,
     props: st.props.slice(),

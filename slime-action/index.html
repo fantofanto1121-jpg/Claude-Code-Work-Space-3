@@ -46,6 +46,7 @@
       <div class="row">
         <div class="chip"><img src="assets/sprites/ui/ui_coin.png" alt=""><b id="coinCount">0</b></div>
         <div class="chip"><img src="assets/sprites/ui/ui_crystal.png" alt=""><b id="crystalCount">0</b></div>
+        <div class="chip"><img src="assets/sprites/ui/ui_height_marker.png" alt=""><b id="heightNow">0</b><span class="total">m</span></div>
       </div>
     </div>
 
@@ -57,10 +58,10 @@
 
     <div class="actions">
       <button class="bigbtn act" id="btnSpecial" type="button">
-        <img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>スペシャル</span>
+        <img src="assets/sprites/ui/ui_button_normal.png" alt=""><img class="press" src="assets/sprites/ui/ui_button_pressed.png" alt=""><span>スペシャル</span>
       </button>
       <button class="bigbtn act" id="btnHeal" type="button">
-        <img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>回復（結晶3）</span>
+        <img src="assets/sprites/ui/ui_button_normal.png" alt=""><img class="press" src="assets/sprites/ui/ui_button_pressed.png" alt=""><span>回復（結晶3）</span>
       </button>
     </div>
 
@@ -78,7 +79,7 @@
       </div>
     </div>
     <p class="lead">スライムを引っ張って はなすと、反対がわへ 飛びます。<br>勢いよく ぶつかって、ステージの モンスターを すべて倒しましょう。</p>
-    <button class="bigbtn" id="btnStart" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>はじめる</span></button>
+    <button class="bigbtn" id="btnStart" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><img class="press" src="assets/sprites/ui/ui_button_pressed.png" alt=""><span>はじめる</span></button>
     <p class="note">マウスでも タッチでも 遊べます</p>
   </div>
 
@@ -90,8 +91,8 @@
         <h2 id="panelTitle">一時停止</h2>
         <div class="stats" id="panelStats"></div>
         <div class="panel-buttons">
-          <button class="bigbtn small" id="btnPrimary" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>つづける</span></button>
-          <button class="bigbtn small" id="btnSecondary" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>タイトルへ</span></button>
+          <button class="bigbtn small" id="btnPrimary" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><img class="press" src="assets/sprites/ui/ui_button_pressed.png" alt=""><span>つづける</span></button>
+          <button class="bigbtn small" id="btnSecondary" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><img class="press" src="assets/sprites/ui/ui_button_pressed.png" alt=""><span>タイトルへ</span></button>
         </div>
       </div>
     </div>

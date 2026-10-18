@@ -13,6 +13,7 @@
   const LAUNCH_MIN = 420;
   const LAUNCH_MAX = 1620;
   const HIT_SPEED = 320;
+  const PX_PER_M = 48;
   const SPR = 0.74;                 // スライム画像の表示倍率
   const R = 34;                     // スライムの当たり判定の半径
 
@@ -84,6 +85,7 @@
     coins: 0, crystals: 0,
     killed: 0, launches: 0,
     special: 0, specialArmed: false,
+    checkpoint: null, fallFxT: 0, hudT: 0,
     aiming: false, aimPt: { x: 0, y: 0 }
   };
 
@@ -97,6 +99,7 @@
     killTotal: document.getElementById('killTotal'),
     coin: document.getElementById('coinCount'),
     crystal: document.getElementById('crystalCount'),
+    height: document.getElementById('heightNow'),
     pullFill: document.querySelector('#pullGauge .fillbox'),
     pullGauge: document.getElementById('pullGauge'),
     btnSpecial: document.getElementById('btnSpecial'),
@@ -157,6 +160,11 @@
     G.cam.x = clamp(G.player.x - W * 0.4, 0, G.stage.width - W);
     G.cam.y = 0;
     G.mode = 'play';
+    G.checkpoint = { x: G.stage.spawn.x, y: G.stage.spawn.y };
+
+    // 遠景の城（ステージの終盤で正面に見える位置に置く）
+    const camEnd = Math.max(0, G.stage.width - W);
+    G.castle = { x: W * 0.5 + camEnd * 0.45, y: 40, par: 0.45, s: 0.8 };
 
     // 背景装飾をステージごとに配置
     const rnd = (function (seed) {
@@ -302,7 +310,15 @@
           if (Math.abs(vn) > 900) G.shake = Math.min(12, Math.abs(vn) / 150);
         }
       }
-      if (ny < -0.5) { p.grounded = true; p.stand = pl; }
+      if (ny < -0.5) {
+        p.grounded = true; p.stand = pl;
+        if (pl.checkpoint && (!G.checkpoint || G.checkpoint.y !== pl.y - R)) {
+          G.checkpoint = { x: pl.cx, y: pl.y - R - 2 };
+          addFx('fx_checkpoint', pl.cx, pl.y - 40, { life: 0.9, s0: 0.4, s1: 1.3 });
+          toast('チェックポイント！', 1.6);
+          Sfx.heal();
+        }
+      }
     }
     if (p.grounded) p.vx -= p.vx * Math.min(1, 2.4 * dt);
   }
@@ -523,6 +539,24 @@
         ? clamp(Math.atan2(p.vy, Math.abs(p.vx) + 1) * 0.5, -0.5, 0.5) * (p.vx < 0 ? -1 : 1)
         : lerp(p.ang, 0, Math.min(1, dt * 8));
 
+      // 落下中の空気の流れ
+      if (!p.grounded && p.vy > 650) {
+        G.fallFxT -= dt;
+        if (G.fallFxT <= 0) {
+          G.fallFxT = 0.09;
+          addFx('fx_fall', p.x + (Math.random() - 0.5) * 34, p.y - 70, {
+            life: 0.32, s0: 0.5, s1: 0.85, alpha: 0.65, vy: -160
+          });
+        }
+      }
+
+      // 高度表示（地面を 0m とする）
+      G.hudT -= dt;
+      if (G.hudT <= 0) {
+        G.hudT = 0.08;
+        el.height.textContent = String(Math.max(0, Math.round((G.stage.groundY - p.y) / PX_PER_M)));
+      }
+
       updateEnemies(dt);
       collect();
 
@@ -533,7 +567,8 @@
         if (G.hearts <= 0) gameOver();
         else {
           toast('落ちてしまった…', 1.6);
-          p.x = G.stage.spawn.x; p.y = G.stage.spawn.y;
+          const cp = G.checkpoint || G.stage.spawn;
+          p.x = cp.x; p.y = cp.y;
           p.vx = 0; p.vy = 0; p.invT = 1.3;
           p.grounded = false; p.stand = null;
         }
@@ -608,6 +643,16 @@
     tileH('bg_far_mountains', 0.1, 330, 0.8, 0.95);
     tileH('bg_clouds_mid', 0.26, -30, 0.7, 0.45);
     tileH('bg_floating_islands_mid', 0.4, -150, 0.58, 0.55);
+
+    // 遠景の城
+    if (G.castle) {
+      const ca = ASSET_FILES.bg_castle;
+      const cw = ca.w * G.castle.s, ch = ca.h * G.castle.s;
+      const cxp = G.castle.x - G.cam.x * G.castle.par;
+      if (cxp > -cw && cxp < W + cw) {
+        drawImg('bg_castle', cxp - cw / 2, G.castle.y - G.cam.y * G.castle.par, cw, ch, 0.85);
+      }
+    }
 
     // 配置した滝・遺跡・ツタ
     for (let i = 0; i < G.scenery.length; i++) {
