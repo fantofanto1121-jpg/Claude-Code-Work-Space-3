@@ -1,9 +1,10 @@
 # スライム・スリング アドベンチャー（slime-action）
 
 スライムを引っ張って はじき、勢いよくぶつかって モンスターを倒す **横スクロール 2D アクション**です。
-**画像素材 72 点をすべて個別の透過 PNG として制作し、ゲームに組み込んであります。**
-
 `index.html` をブラウザで開けば遊べます（通信なし・ビルド不要）。
+
+**絵はすべて、配布された 1 枚絵の素材シート（`assets/source/asset_sheet.webp`）を
+切り出して使っています。** 絵をプログラムで描き直すことはしていません。
 
 ---
 
@@ -12,127 +13,93 @@
 | 操作 | 内容 |
 |------|------|
 | スライムをドラッグして はなす | 引いた向きの **反対** へ飛ぶ。引くほど強い |
+| 中央のスライムボタン | 前回と同じ向きに はじく |
 | スペシャル ボタン / E キー | ゲージが満タンのとき発動。次の一撃が強化され、衝撃波で周囲にもダメージ |
-| 回復 ボタン / Q キー | 結晶 3 個でハートを 1 つ回復 |
-| 一時停止ボタン / Esc | 一時停止 |
-| 設定ボタン | 効果音の ON / OFF |
+| ポーション ボタン / Q キー | 結晶 3 個でハートを 1 つ回復 |
+| 一時停止 / Esc | 一時停止 |
 
 - 足場に静止しているときだけ発射できます。
-- **勢いがついた状態でぶつかるとダメージを与え、止まった状態で触れるとこちらが受けます。**
-- 谷に落ちるとハートが 1 つ減り、**最後に通ったチェックポイント**へ戻ります。
-  旗の立った足場に乗ると、そこがチェックポイントになります。
+- 勢いがついた状態でぶつかるとダメージを与え、止まった状態で触れるとこちらが受けます。
+- 谷に落ちるとハートが 1 つ減り、最後に通ったチェックポイント（旗の足場）へ戻ります。
+- **鍵**を拾うと**宝箱**が開けられ、結晶が 3 つ手に入ります。**ポーション**はその場でハートを回復します。
 - ステージのモンスターを すべて倒すとクリア。全 3 ステージ、最後はボスが出ます。
-- 足場の種類：草・石・木・浮遊岩・崩れる遺跡・きのこ（大きく跳ねる）・動く足場。
+- 足場は、ふつうの島・跳ねる島・崩れる島・左右に動く島・チェックポイントの 5 種類。
 
 ---
 
-## 2. 画像素材について
+## 2. 素材について
 
-### 制作方法
-
-この環境では **画像生成ツールが利用できなかった**ため、仕様書の代替手段に従い
-**プログラムによる描画（Canvas 2D）** で制作しました。
-
-1. `tools/artlib.js` … 手描き風の共通描画（輪郭・陰影・質感・草・岩・木・金属・布・水・雲）
-2. `tools/assets_a.js` / `assets_b.js` / `assets_c.js` … 素材 72 点の描画コード
-3. `tools/gen.html` + `tools/generate.cjs` … headless Chromium で 1 枚ずつ描き、
-   `canvas.toDataURL('image/png')` で **アルファ付き PNG** として書き出し
-4. `tools/verify.py`（Pillow）… アルファチャンネル・寸法・余白・破損を検証
-
-再生成するには次を実行します（Chromium と playwright-core が必要）。
+### 作りかた（切り出しだけ。描き直しはしない）
 
 ```
-node tools/generate.cjs          # PW_CORE, PW_EXE を環境変数で指定
-python3 tools/verify.py          # 検証（tools/verify_report.json）
-python3 tools/make_manifest.py   # assets/metadata/asset_manifest.json を更新
+python3 tools/slice_sheet.py     # シートを透明度で分割 → tools/sliced*/
+python3 tools/build_assets.py    # 名前を付けて assets/sheet/ へ配置＋寸法を自動計測
 ```
 
-各素材が「どのファイルの何行目で描かれたか」は
-`assets/metadata/asset_manifest.json` の `recipe` に記録しています。
+1. `tools/slice_sheet.py`
+   シートは元から透過しているので、アルファを 64〜200 で伸ばして背景のにじみを落とし、
+   つながっている部分を 1 つの素材として切り出します（粗い分割と細かい分割の 2 通り）。
+2. `tools/build_assets.py`
+   切り出した部品に名前を付けて `assets/sheet/<種類>/` へ保存し、あわせて
+   **ゲームに必要な数値を絵から自動計測**します。
+   - 足場: 着地面の高さと、水平な上面の左右の範囲 → `PLATFORM_METRICS`
+   - 伸びたスライムや飛ぶスライム: 頭の位置 → `SPRITE_ANCHORS`
+   - HUD のステータス板: ハート列と青いゲージの位置 → `UI_ANCHORS` / `BAR_STYLE`
+   - 空の色: 背景の絵から平均色を取って空のグラデーションに使う → `SKY_COLORS`
+   結果は `js/sheet_data.js` と `assets/metadata/asset_manifest.json` に出力されます。
 
-### 画風のきまり
+### 内訳（81 点・すべて個別の透過 PNG）
 
-- 光源は **左上**。影は右下に落とす。
-- 輪郭は同系色の濃い線で、**外周のシルエットにだけ**描く（内側に線を重ねない）。
-- 草は草地の上辺のカーブに合わせて生やし、浮いて見えないようにする。
-- セル塗り＋やわらかい陰影。質感は控えめな筆致で、描き込みすぎない。
-- UI の文字は画像に焼き込まず、**HTML 側のテキスト**で描画する。
+| 種類 | 数 | 置き場所 |
+|------|----|----------|
+| スライム | 11 | `assets/sheet/slime/` |
+| 敵 | 12 | `assets/sheet/enemies/`（ゴブリン 4・赤 4・紫 4） |
+| 足場 | 7 | `assets/sheet/platforms/` |
+| 小物 | 14 | `assets/sheet/props/` |
+| 背景 | 9 | `assets/sheet/bg/` |
+| エフェクト | 10 | `assets/sheet/fx/` |
+| UI | 18 | `assets/sheet/ui/` |
 
-### 検証結果
-
-| 項目 | 結果 |
-|------|------|
-| ファイル数 | 72（すべて個別ファイル。スプライトシートではない） |
-| 破損ファイル | 0 |
-| アルファチャンネルあり | 72 / 72（`PNG RGBA`） |
-| 実際に透明画素を含む | 71 / 72（`bg_sky.png` のみ全面不透過。最奥の空のため意図的） |
-| 画像内の文字・透かし | なし |
-
----
-
-## 3. 素材一覧（カテゴリ別）
-
-| カテゴリ | 数 | 置き場所 | 内容 |
-|----------|----|----------|------|
-| スライム | 9 | `assets/sprites/slime/` | idle / drag / launch / fly / fall / land / blink / damage / icon |
-| 敵 | 9 | `assets/sprites/enemies/` | ゴブリン 3・赤スライム 2・こうもり 2・ボス 2 |
-| エフェクト | 8 | `assets/sprites/effects/` | drag_line / trajectory_dot / launch_streak / land_dust / land_star / splash / checkpoint / fall |
-| 足場 | 10 | `assets/sprites/platforms/` | grass_small / medium / wide / stone / wood / floating_rock / broken_ruin / mushroom / moving / checkpoint |
-| 背景 | 10 | `assets/backgrounds/{sky,far,mid,near}/` | sky / far_mountains / islands_far / castle / waterfall / clouds_mid / islands_mid / vines / forest / ruins |
-| 小物 | 10 | `assets/sprites/props/` | wood_sign / lantern / flag / chest / crystal / flower / bush / rock / vine / checkpoint_flag |
-| UI | 13 | `assets/sprites/ui/` | heart_full / heart_empty / energy_bar / energy_fill / panel / button_normal / button_pressed / pause / height_marker / checkpoint / coin / crystal / settings |
-| タイトル | 3 | `assets/sprites/title/` | logo（枠のみ・題字は HTML） / slime_pose / decoration |
-
-スライムの 8 状態は **192×192・接地線 y=168・中心 x=96** で基準をそろえてあり、
-そのまま差し替えてアニメーションできます。
+**81 点すべてをゲーム内で使っています。**
+HUD のステータス板・説明パネル・目標の帯・高さの板は、シートの絵をそのまま使い、
+変化する数値（ハートの数・ゲージ・高さ・討伐数）だけを HTML 側で重ねています。
 
 ---
 
-## 4. フォルダ構成
+## 3. フォルダ構成
 
 ```
 slime-action/
-├── index.html           画面と HUD（文字はすべて HTML 側）
+├── index.html           画面と HUD
 ├── css/style.css        HUD のスタイル（cqw 指定で画面に比例）
 ├── js/
-│   ├── assets.js        素材一覧と読み込み（マニフェストから生成）
-│   ├── world.js         足場・敵の当たり判定仕様とステージ定義
-│   └── game.js          物理・入力・敵の行動・カメラ・描画・HUD 連携
+│   ├── sheet_data.js    自動計測した寸法（build_assets.py が生成）
+│   ├── assets.js        素材一覧と読み込み（自動生成）
+│   ├── world.js         足場・敵の当たり判定とステージ定義
+│   └── game.js          物理・入力・敵の行動・カメラ・描画
 ├── assets/
-│   ├── sprites/{slime,enemies,effects,platforms,props,ui,title}/
-│   ├── backgrounds/{sky,far,mid,near}/
+│   ├── source/asset_sheet.webp   元の素材シート
+│   ├── sheet/{slime,enemies,platforms,props,bg,fx,ui}/
 │   └── metadata/asset_manifest.json
-└── tools/               素材の生成・検証スクリプト
+└── tools/               切り出しと配置のスクリプト
 ```
 
 ---
 
-## 5. ゲームへの組み込み
+## 4. 絵と当たり判定の分け方
 
-| 仕様 | 実装場所 |
-|------|----------|
-| ドラッグ中に伸びる表現 | `slime_drag` へ差し替え（`js/game.js` のスプライト選択） |
-| 引いた向きと逆へ飛ぶ | `release()` |
-| 速度に応じたスプライト変化 | `slime_fly` / `slime_fall` / `slime_launch` |
-| 着地でつぶれる | `slime_land` を 0.2 秒表示＋土煙と星 |
-| 軌道予測線 | `fx_trajectory_dot` を 64 ステップ分シミュレーションして表示 |
-| 当たり判定 | `js/world.js` の `PLATFORM_SPECS` と `ENEMY_SPECS`（画像とは別に数値で保持） |
-| 敵の行動 | ゴブリン＝往復と攻撃、赤スライム／ボス＝跳ねる、こうもり＝空中を往復 |
-| 体力バー | 枠は `ui_energy_bar`、中身はコードで赤く描画 |
-| 横スクロール | カメラが左右に追従、上下にも少し動く |
-| パララックス | 空 → 遠景の浮島・山 → 雲 → 中景の浮島 → 滝・遺跡・ツタ → 樹林 |
-| チェックポイント | `platform_checkpoint` ＋ `prop_checkpoint_flag`。着地で復帰地点を更新し `fx_checkpoint` を表示 |
-| 落下中の演出 | `fx_fall` を落下速度が上がったときに流す |
-| 高度表示 | `ui_height_marker` ＋ 地面からの高さ（1m = 48px） |
-| ボタンの押下 | `ui_button_pressed` を重ね、押している間だけ表示 |
-| 遠景の城 | `bg_castle` をステージ終盤で正面に見える位置に配置（視差 0.45） |
-| タッチとマウス | Pointer Events で共通処理 |
+当たり判定は画像の見た目とは別に数値で管理しています。
+
+- 足場: `PLATFORM_METRICS`（画像から計測した上面）を `ART`（表示倍率 1.8）倍して矩形に
+- 敵: `ENEMY_SPECS` の `w` / `h`。絵のフレームごとの大きさの違いは、
+  足元中央をそろえて描くことで吸収
+- スライム: 半径 36 の円。伸びた絵・飛ぶ絵は計測した「頭の位置」を基準に回転させて描画
 
 ---
 
-## 6. 残っている課題
+## 5. 残っている課題
 
-- 素材はすべて静止画です。ゴブリンの歩きは 2 枚の差し替えで表現しています。
-- 宝箱は「開いた状態」の絵がなく、置き飾りとして使っています。
-- 制作した 72 点はすべてゲーム内で使用しています。
+- シートの解像度（1125×750）に合わせて 1.8 倍で表示しているため、拡大するとやや甘くなります。
+- 宝箱は「開いた絵」がないため、開封後は半透明にして区別しています。
+- ゴブリンの歩きは 4 コマの差し替え、赤・紫スライムも同じ 4 コマを使い回しています。
 - 音は WebAudio の簡単な効果音のみで、音声ファイルはありません。

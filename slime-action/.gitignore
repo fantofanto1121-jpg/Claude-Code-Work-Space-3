@@ -1,0 +1,6 @@
+# 切り出しの中間ファイル（tools/slice_sheet.py で再生成できる）
+tools/sliced/
+tools/sliced_fine/
+tools/sliced_index.json
+tools/sliced_fine_index.json
+tools/__pycache__/

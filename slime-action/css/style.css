@@ -1,12 +1,13 @@
 /* ===========================================================
    スライム・スリング アドベンチャー — UI スタイル
-   画面は 16:9 の箱に収め、HUD は cqw 指定で比例拡大する
+   HUD の絵は素材シートの画像をそのまま使い、数値だけ重ねる
    =========================================================== */
 
 :root{
-  --edge:rgba(150,200,245,.6);
+  --edge:rgba(150,200,245,.55);
   --text:#eef5fb;
   --dim:#b6cde2;
+  --panel:rgba(12,26,44,.88);
 }
 
 *{ box-sizing:border-box; }
@@ -28,7 +29,7 @@ body{ display:grid; place-items:center; }
   height:min(56.25vw, 100vh);
   container-type:size;
   overflow:hidden;
-  background:#9ed2ef;
+  background:#6ea8d8;
   box-shadow:0 .6cqw 3cqw rgba(0,0,0,.5);
   touch-action:none;
   user-select:none;
@@ -38,100 +39,112 @@ body{ display:grid; place-items:center; }
 .hud{ position:absolute; inset:0; pointer-events:none; font-size:1cqw; }
 .hud.hidden{ display:none; }
 
-/* ---------- 左上：ライフとスペシャル ---------- */
-.hud-left{ position:absolute; top:1.6cqw; left:1.6cqw; }
-.life{ display:flex; align-items:flex-start; gap:.9cqw; }
-.life .face{ width:6.4cqw; height:6.4cqw; filter:drop-shadow(0 .3cqw .5cqw rgba(0,0,0,.4)); }
-.life-right{ display:flex; flex-direction:column; gap:.7cqw; }
-.hearts{ display:flex; gap:.4cqw; }
-.hearts img{ width:3.8cqw; height:3.8cqw; filter:drop-shadow(0 .2cqw .4cqw rgba(0,0,0,.4)); }
+/* ---------- 左上：素材のステータス板にハートとゲージを重ねる ---------- */
+.status{ position:absolute; top:1.6cqw; left:1.6cqw; width:26cqw; }
+.status .panel{ width:100%; display:block; filter:drop-shadow(0 .3cqw .6cqw rgba(0,0,0,.4)); }
+.status .hearts{ position:absolute; display:flex; justify-content:space-between; align-items:center; }
+.status .hearts img{ height:100%; width:23.5%; object-fit:contain; display:block; }
+.status .hearts img.lost{ filter:grayscale(1) brightness(.45); opacity:.85; }
+.status .spbar{ position:absolute; border-radius:1cqw; overflow:hidden; }
+.status .spbar i{ display:block; height:100%; width:0%; transition:width .2s ease; }
 
-.gauge{ position:relative; width:17cqw; }
-.gauge .bar{ width:100%; display:block; }
-.gauge .fillbox{
-  position:absolute; left:.64cqw; top:.64cqw;
-  width:0; height:1.28cqw; overflow:hidden;
-}
-.gauge .fill{ width:15.7cqw; height:100%; display:block; }
-.gauge-label{
-  position:absolute; left:17.8cqw; top:.5cqw;
-  font-size:1.5cqw; color:var(--dim);
-  text-shadow:0 .15cqw .3cqw rgba(0,0,0,.7);
-  white-space:nowrap;
-}
-#btnSpecial.ready, #btnHeal.ready{ filter:drop-shadow(0 0 .9cqw rgba(150,215,250,.7)); }
-#btnSpecial:not(.ready), #btnHeal:not(.ready){ opacity:.5; }
-
-/* ---------- 右上：ステージと目標 ---------- */
+/* ---------- 右上 ---------- */
 .hud-right{
   position:absolute; top:1.6cqw; right:1.6cqw;
-  display:flex; flex-direction:column; align-items:flex-end; gap:.8cqw;
+  display:flex; flex-direction:column; align-items:flex-end; gap:.7cqw;
   pointer-events:auto;
 }
-.hud-right .row{ display:flex; align-items:center; gap:.8cqw; }
+.hud-right .row{ display:flex; align-items:center; gap:.7cqw; }
 .chip{
-  display:flex; align-items:center; gap:.6cqw;
-  padding:.4cqw 1.2cqw .4cqw .5cqw;
+  display:flex; align-items:center; gap:.5cqw;
+  padding:.35cqw 1.1cqw .35cqw .5cqw;
   border-radius:2cqw;
-  background:linear-gradient(180deg, rgba(42,78,120,.85), rgba(10,24,42,.85));
-  border:.18cqw solid var(--edge);
-  box-shadow:0 .3cqw .8cqw rgba(0,0,0,.35);
-  font-size:1.7cqw;
+  background:var(--panel);
+  border:.16cqw solid rgba(190,170,110,.7);
+  box-shadow:0 .3cqw .8cqw rgba(0,0,0,.4);
+  font-size:1.6cqw;
 }
-.chip img{ width:3.2cqw; height:3.2cqw; }
-.chip b{ font-size:2.2cqw; }
-.chip .total{ color:var(--dim); font-size:1.5cqw; margin-left:-.3cqw; }
-.stage-chip{ padding:.4cqw 1.4cqw; gap:.9cqw; }
-.stage-chip b{ font-size:2cqw; }
-.stage-chip span{ color:var(--dim); font-size:1.7cqw; }
-.quest span{ font-size:1.7cqw; }
+.chip img{ height:2.8cqw; width:auto; }
+.chip b{ font-size:2.1cqw; }
+.chip .total{ color:var(--dim); font-size:1.4cqw; margin-left:-.3cqw; }
+.stage-chip{ padding:.35cqw 1.2cqw; gap:.8cqw; }
+.stage-chip b{ font-size:1.9cqw; }
+.stage-chip span{ color:var(--dim); font-size:1.6cqw; }
+.chip.btn{ cursor:pointer; color:var(--text); font-family:inherit; }
+.chip.btn:active{ transform:translateY(.2cqw); }
+.key-chip{ opacity:.45; }
+.key-chip.has{ opacity:1; }
 
-.iconbtn{
-  width:5.2cqw; height:5.2cqw; padding:0;
-  background:none; border:0; cursor:pointer;
-  filter:drop-shadow(0 .3cqw .6cqw rgba(0,0,0,.4));
+.heightpanel{ position:relative; width:11cqw; }
+.heightpanel img{ width:100%; display:block; }
+.heightpanel .value{
+  position:absolute; right:7%; top:44%; height:46%;
+  min-width:52%;
+  display:flex; align-items:center; justify-content:flex-end; gap:.2cqw;
+  padding:0 .4cqw;
+  background:#121d2e; border-radius:.5cqw;
+  font-size:1.5cqw; color:var(--dim);
 }
-.iconbtn img{ width:100%; height:100%; display:block; }
-.iconbtn:active{ transform:translateY(.3cqw) scale(.96); }
+.heightpanel .value b{ font-size:2.2cqw; color:#fff; }
 
-/* ---------- 下：ひっぱりゲージとボタン ---------- */
-.gauge.pull{
-  position:absolute; left:50%; bottom:2.4cqw; transform:translateX(-50%);
-  width:17cqw; opacity:.4; transition:opacity .2s ease;
+.compass{ position:relative; width:9cqw; }
+.compass img{ width:100%; display:block; }
+.compass canvas{ position:absolute; inset:0; width:100%; height:100%; }
+
+/* ---------- 下：ひっぱりゲージ ---------- */
+.pull{
+  position:absolute; left:50%; bottom:2.6cqw; transform:translateX(-50%);
+  width:26cqw; opacity:.45; transition:opacity .2s ease; text-align:center;
 }
-.gauge.pull.active{ opacity:1; }
-.gauge.pull .gauge-label{ left:50%; top:-2.4cqw; transform:translateX(-50%); }
+.pull.active{ opacity:1; }
+.pull .label{ display:block; font-size:1.4cqw; color:var(--dim); margin-bottom:.3cqw;
+  text-shadow:0 .15cqw .3cqw rgba(0,0,0,.7); }
+.pull .track{
+  height:1.6cqw; border-radius:1cqw; overflow:hidden;
+  background:#121c2b; border:.16cqw solid rgba(190,170,110,.6);
+}
+.pull .track i{ display:block; height:100%; width:0%; background:linear-gradient(90deg,#6fd0ff,#118ddc); }
 
+/* ---------- 右下：素材のボタン ---------- */
 .actions{
-  position:absolute; right:1.8cqw; bottom:2cqw;
-  display:flex; gap:1.2cqw; pointer-events:auto;
+  position:absolute; right:2cqw; bottom:2cqw;
+  display:flex; align-items:flex-end; gap:1.4cqw;
+  pointer-events:auto;
 }
-
-.bigbtn{
-  position:relative; width:18cqw; height:6.8cqw;
-  background:none; border:0; padding:0; cursor:pointer;
-  display:grid; place-items:center;
+.imgbtn{
+  position:relative; background:none; border:0; padding:0; cursor:pointer;
+  width:7cqw; display:grid; place-items:center;
+  filter:drop-shadow(0 .3cqw .7cqw rgba(0,0,0,.45));
 }
-.bigbtn img{ position:absolute; inset:0; width:100%; height:100%; }
-.bigbtn .press{ opacity:0; }
-.bigbtn:active .press{ opacity:1; }
-.bigbtn:active span{ transform:translateY(.35cqw); }
-.bigbtn span{ position:relative; font-size:1.9cqw; font-weight:700; color:#3a2a08; }
-.bigbtn:active{ transform:translateY(.15cqw); }
-.bigbtn.act{ width:15cqw; height:5.6cqw; }
-.bigbtn.act span{ font-size:1.6cqw; }
-.bigbtn.small{ width:16cqw; height:6cqw; }
-.bigbtn.small span{ font-size:1.7cqw; }
+.imgbtn img{ width:100%; display:block; }
+.imgbtn.main{ width:9.6cqw; }
+.imgbtn:active{ transform:translateY(.3cqw) scale(.97); }
+.imgbtn em{
+  position:absolute; top:-2.2cqw; left:50%; transform:translateX(-50%);
+  font-style:normal; font-size:1.3cqw; color:var(--dim); white-space:nowrap;
+  text-shadow:0 .15cqw .3cqw rgba(0,0,0,.8);
+}
+#btnSpecial:not(.ready), #btnHeal:not(.ready){ opacity:.45; }
+#btnSpecial.ready{ animation:pulse 1.4s ease-in-out infinite; }
+@keyframes pulse{ 50%{ filter:drop-shadow(0 0 1.2cqw rgba(140,210,255,.85)); } }
 
-/* ---------- トースト ---------- */
+/* ---------- ステージ開始の案内（素材の板をそのまま出す） ---------- */
+.intro{
+  position:absolute; left:50%; top:19cqw; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:1.4cqw;
+  opacity:0; transition:opacity .4s ease;
+}
+.intro.show{ opacity:1; }
+.intro .banner{ width:34cqw; height:3.6cqw; overflow:hidden; position:relative; }
+.intro .banner img{ width:100%; position:absolute; left:0; bottom:0; }
+.intro .tutorial{ width:30cqw; }
+
 .toast{
-  position:absolute; left:50%; top:12cqw; transform:translateX(-50%);
-  padding:.7cqw 2cqw; border-radius:1.4cqw;
-  background:rgba(10,24,42,.72);
-  border:.16cqw solid var(--edge);
-  font-size:2cqw; font-weight:700;
-  opacity:0; transition:opacity .25s ease;
-  white-space:nowrap;
+  position:absolute; left:50%; top:11cqw; transform:translateX(-50%);
+  padding:.6cqw 1.8cqw; border-radius:1.2cqw;
+  background:var(--panel); border:.16cqw solid rgba(190,170,110,.7);
+  font-size:1.8cqw; font-weight:700;
+  opacity:0; transition:opacity .25s ease; white-space:nowrap;
 }
 .toast.show{ opacity:1; }
 
@@ -139,37 +152,44 @@ body{ display:grid; place-items:center; }
 .screen{
   position:absolute; inset:0;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:1.4cqw;
-  background:radial-gradient(circle at 50% 42%, rgba(10,28,48,.45), rgba(4,12,22,.86));
+  gap:1.2cqw;
+  background:radial-gradient(circle at 50% 42%, rgba(10,28,48,.45), rgba(4,12,22,.88));
   pointer-events:auto;
 }
 .screen.hidden{ display:none; }
-
-.title-art{ position:relative; width:52cqw; display:flex; flex-direction:column; align-items:center; }
-.title-art .deco{ position:absolute; top:2cqw; width:56cqw; opacity:.5; z-index:0; }
-.title-art .pose{ width:20cqw; position:relative; z-index:1; }
-.title-art .logo{ position:relative; z-index:2; width:52cqw; margin-top:-1cqw; display:grid; place-items:center; }
-.title-art .logo img{ width:100%; display:block; }
-.title-art .logo h1{
-  position:absolute; margin:0;
-  font-size:3.4cqw; letter-spacing:.03em; color:#fff;
-  text-shadow:0 .3cqw .7cqw rgba(0,0,0,.6);
-  white-space:nowrap;
+.title-castle{ width:30cqw; filter:drop-shadow(0 1cqw 2cqw rgba(0,0,0,.5)); margin-bottom:-2cqw; }
+.screen h1{
+  margin:0; font-size:4cqw; letter-spacing:.04em; color:#fff;
+  text-shadow:0 .3cqw .8cqw rgba(0,0,0,.7);
 }
-.lead{ margin:0; font-size:1.8cqw; line-height:1.8; color:var(--dim); text-align:center; }
-.note{ margin:0; font-size:1.5cqw; color:var(--dim); }
+.lead{ margin:0; font-size:1.7cqw; line-height:1.8; color:var(--dim); text-align:center; }
+.note{ margin:0; font-size:1.4cqw; color:var(--dim); }
+.title-row{ width:22cqw; opacity:.9; }
+.imgbtn.start{ width:11cqw; }
+.imgbtn.start em{ top:auto; bottom:-3cqw; font-size:1.8cqw; color:#fff; font-weight:700; }
 
-.panel{ position:relative; width:44cqw; display:grid; place-items:center; }
-.panel .plate{ width:100%; display:block; }
-.panel-body{
-  position:absolute; inset:0;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1cqw;
-  padding:2.4cqw;
+.panel-box{
+  width:44cqw; padding:2.6cqw 3cqw;
+  display:flex; flex-direction:column; align-items:center; gap:1.2cqw;
+  background:var(--panel);
+  border:.3cqw solid rgba(190,170,110,.8);
+  border-radius:1.6cqw;
+  box-shadow:0 1cqw 3cqw rgba(0,0,0,.6);
 }
-.panel-body h2{ margin:0; font-size:3.2cqw; letter-spacing:.04em; }
-.stats{ display:flex; gap:2.6cqw; font-size:1.5cqw; color:var(--dim); text-align:center; }
-.stats b{ display:block; font-size:2.6cqw; color:#fff; }
+.panel-box h2{ margin:0; font-size:3cqw; letter-spacing:.04em; }
+.stats{ display:flex; gap:2.6cqw; font-size:1.4cqw; color:var(--dim); text-align:center; }
+.stats b{ display:block; font-size:2.4cqw; color:#fff; }
+.progress{ width:20cqw; opacity:.95; }
 .panel-buttons{ display:flex; gap:1.4cqw; }
+.txtbtn{
+  font-family:inherit; cursor:pointer;
+  padding:.8cqw 2.2cqw; border-radius:1cqw;
+  font-size:1.7cqw; font-weight:700; color:#2a1f08;
+  background:linear-gradient(180deg,#e8cc74,#b48a2a);
+  border:.16cqw solid #f2e1a6;
+  box-shadow:0 .3cqw .7cqw rgba(0,0,0,.45);
+}
+.txtbtn:active{ transform:translateY(.2cqw); }
 
 /* ---------- 読み込み ---------- */
 .loading{
