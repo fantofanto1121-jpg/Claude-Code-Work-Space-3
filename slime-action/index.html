@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>スライム・スリング アドベンチャー</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage" class="stage">
+  <canvas id="game" class="game-canvas"></canvas>
+
+  <!-- ===== HUD（文字はすべて HTML 側。画像には焼き込まない） ===== -->
+  <div class="hud hidden" id="hud">
+    <div class="hud-left">
+      <div class="life">
+        <img class="face" src="assets/sprites/slime/slime_icon.png" alt="">
+        <div class="life-right">
+          <div class="hearts" id="hearts"></div>
+          <div class="gauge" id="spGauge">
+            <img class="bar" src="assets/sprites/ui/ui_energy_bar.png" alt="">
+            <div class="fillbox"><img class="fill" src="assets/sprites/ui/ui_energy_fill.png" alt=""></div>
+            <span class="gauge-label">スペシャル</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="row">
+        <div class="chip stage-chip">
+          <b id="stageNo">ステージ 1-1</b><span id="stageName">はじまりの森</span>
+        </div>
+        <button class="iconbtn" id="btnPause" type="button" aria-label="一時停止">
+          <img src="assets/sprites/ui/ui_pause.png" alt="">
+        </button>
+        <button class="iconbtn" id="btnSettings" type="button" aria-label="設定">
+          <img src="assets/sprites/ui/ui_settings.png" alt="">
+        </button>
+      </div>
+      <div class="chip quest">
+        <img src="assets/sprites/ui/ui_checkpoint.png" alt="">
+        <span>モンスターを すべて倒そう！</span>
+        <b id="killCount">0</b><span class="total" id="killTotal">/5</span>
+      </div>
+      <div class="row">
+        <div class="chip"><img src="assets/sprites/ui/ui_coin.png" alt=""><b id="coinCount">0</b></div>
+        <div class="chip"><img src="assets/sprites/ui/ui_crystal.png" alt=""><b id="crystalCount">0</b></div>
+      </div>
+    </div>
+
+    <div class="gauge pull" id="pullGauge">
+      <img class="bar" src="assets/sprites/ui/ui_energy_bar.png" alt="">
+      <div class="fillbox"><img class="fill" src="assets/sprites/ui/ui_energy_fill.png" alt=""></div>
+      <span class="gauge-label">ひっぱりの強さ</span>
+    </div>
+
+    <div class="actions">
+      <button class="bigbtn act" id="btnSpecial" type="button">
+        <img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>スペシャル</span>
+      </button>
+      <button class="bigbtn act" id="btnHeal" type="button">
+        <img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>回復（結晶3）</span>
+      </button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- ===== タイトル ===== -->
+  <div class="screen" id="titleScreen">
+    <div class="title-art">
+      <img class="deco" src="assets/sprites/title/title_decoration.png" alt="">
+      <img class="pose" src="assets/sprites/title/title_slime_pose.png" alt="">
+      <div class="logo">
+        <img src="assets/sprites/title/logo_slime_adventure.png" alt="">
+        <h1>スライム・スリング アドベンチャー</h1>
+      </div>
+    </div>
+    <p class="lead">スライムを引っ張って はなすと、反対がわへ 飛びます。<br>勢いよく ぶつかって、ステージの モンスターを すべて倒しましょう。</p>
+    <button class="bigbtn" id="btnStart" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>はじめる</span></button>
+    <p class="note">マウスでも タッチでも 遊べます</p>
+  </div>
+
+  <!-- ===== パネル ===== -->
+  <div class="screen hidden" id="panelScreen">
+    <div class="panel">
+      <img class="plate" src="assets/sprites/ui/ui_panel.png" alt="">
+      <div class="panel-body">
+        <h2 id="panelTitle">一時停止</h2>
+        <div class="stats" id="panelStats"></div>
+        <div class="panel-buttons">
+          <button class="bigbtn small" id="btnPrimary" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>つづける</span></button>
+          <button class="bigbtn small" id="btnSecondary" type="button"><img src="assets/sprites/ui/ui_button_normal.png" alt=""><span>タイトルへ</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" id="loading"><span>素材を読み込んでいます</span><i id="loadBar"></i></div>
+</div>
+
+<script src="js/assets.js"></script>
+<script src="js/world.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

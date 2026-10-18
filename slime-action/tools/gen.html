@@ -1,0 +1,24 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>asset generator</title></head><body>
+<script>
+  const ASSETS = [];
+  function def(name, dir, w, h, draw) { ASSETS.push({ name: name, dir: dir, w: w, h: h, draw: draw }); }
+</script>
+<script src="artlib.js"></script>
+<script src="assets_a.js"></script>
+<script src="assets_b.js"></script>
+<script src="assets_c.js"></script>
+<script>
+  window.assetList = function () {
+    return ASSETS.map(function (a) { return { name: a.name, dir: a.dir, w: a.w, h: a.h }; });
+  };
+  window.renderAsset = function (i) {
+    const a = ASSETS[i];
+    const c = document.createElement('canvas');
+    c.width = a.w; c.height = a.h;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, a.w, a.h);
+    a.draw(ctx, a.w, a.h);
+    return c.toDataURL('image/png');
+  };
+</script>
+</body></html>
