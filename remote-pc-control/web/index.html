@@ -88,11 +88,21 @@
 <div class="sheet" id="kb" hidden>
   <div class="sheet-head">
     <h2>キーボード</h2>
+    <div class="chiprow mode">
+      <button class="chip" id="kb-mode-keys" aria-pressed="true">ボタン</button>
+      <button class="chip" id="kb-mode-text" aria-pressed="false">入力欄</button>
+    </div>
     <button class="chip" id="kb-close">閉じる</button>
   </div>
-  <input id="typebox" type="text" autocomplete="off" autocapitalize="off"
-         spellcheck="false" placeholder="ここに入力すると PC に送られます">
-  <div class="keys" id="keys"></div>
+
+  <div class="kbd" id="kb-keys"></div>
+
+  <div class="kb-text" id="kb-text" hidden>
+    <input id="typebox" type="text" autocomplete="off" autocapitalize="off"
+           spellcheck="false" placeholder="ここに入力すると PC に送られます">
+    <div class="keys" id="keys"></div>
+    <p class="kb-hint">日本語を打つときはこちら。端末のキーボードが開きます。</p>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>

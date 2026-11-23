@@ -394,8 +394,141 @@
     b.onclick = () => { send(Object.assign({ t: 'key' }, msg)); buzz(8); };
     keysBox.appendChild(b);
   });
-  $('kb-open').onclick = () => { kb.hidden = false; typebox.focus(); };
+  /* ---- button keyboard: types without opening the device keyboard ---- */
+  const kbKeys = $('kb-keys'), kbText = $('kb-text');
+  const mods = { ctrl: false, alt: false, win: false, shift: false };
+  let shiftLock = false, lastShiftTap = 0, symbolLayer = false;
+
+  const DIGITS = '1234567890';
+  const DIGITS_SHIFT = '!@#$%^&*()';
+  const LETTER_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+  const SYMBOL_ROWS = [
+    ['-', '/', ':', ';', '(', ')', '¥', '&', '@', '"'],
+    ['.', ',', '?', '!', "'", '`', '_', '+', '=', '*'],
+    ['[', ']', '{', '}', '#', '%', '^', '\\', '|', '~']
+  ];
+
+  const activeMods = () => Object.keys(mods).filter((m) => mods[m]);
+
+  function clearOneShot() {
+    let changed = false;
+    ['ctrl', 'alt', 'win'].forEach((m) => { if (mods[m]) { mods[m] = false; changed = true; } });
+    if (mods.shift && !shiftLock) { mods.shift = false; changed = true; }
+    if (changed) renderKeyboard();
+  }
+
+  function tapChar(ch, base) {
+    const m = activeMods();
+    // Shift alone is applied here, not on the PC: sending the literal character
+    // keeps the key label honest whatever keyboard layout Windows is set to
+    // (Shift+2 is @ on a US layout but " on a Japanese one).
+    if (m.some((x) => x !== 'shift')) send({ t: 'key', k: base, mods: m });
+    else send({ t: 'text', s: ch });
+    buzz(6); clearOneShot();
+  }
+
+  function tapKey(name) {
+    send({ t: 'key', k: name, mods: activeMods() });
+    buzz(6); clearOneShot();
+  }
+
+  function toggleMod(name) {
+    if (name === 'shift') {
+      const now = performance.now();
+      if (now - lastShiftTap < 420) { shiftLock = !shiftLock; mods.shift = shiftLock; }
+      else { shiftLock = false; mods.shift = !mods.shift; }
+      lastShiftTap = now;
+    } else {
+      mods[name] = !mods[name];
+    }
+    buzz(10); renderKeyboard();
+  }
+
+  function makeKey(spec) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = spec.label;
+    if (spec.cls) b.className = spec.cls;
+    if (spec.pressed !== undefined) b.setAttribute('aria-pressed', String(spec.pressed));
+    if (spec.lock) b.dataset.lock = 'on';
+    // pointerdown with preventDefault keeps focus where it is, so iOS never
+    // slides its own keyboard up
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); spec.onTap(); });
+    return b;
+  }
+
+  function renderKeyboard() {
+    const rows = [[
+      { label: 'Esc', cls: 'util', onTap: () => tapKey('escape') },
+      { label: 'Tab', cls: 'util', onTap: () => tapKey('tab') },
+      { label: 'Ctrl', cls: 'util', pressed: mods.ctrl, onTap: () => toggleMod('ctrl') },
+      { label: 'Alt', cls: 'util', pressed: mods.alt, onTap: () => toggleMod('alt') },
+      { label: 'Win', cls: 'util', pressed: mods.win, onTap: () => toggleMod('win') },
+      { label: 'Del', cls: 'util', onTap: () => tapKey('delete') }
+    ]];
+
+    if (symbolLayer) {
+      SYMBOL_ROWS.forEach((chars) => rows.push(
+        chars.map((c) => ({ label: c, onTap: () => tapChar(c, c) }))));
+    } else {
+      const shown = mods.shift ? DIGITS_SHIFT : DIGITS;
+      rows.push(DIGITS.split('').map((d, i) => ({
+        label: shown[i], onTap: () => tapChar(shown[i], d)
+      })));
+      LETTER_ROWS.forEach((row, idx) => {
+        const keys = row.split('').map((c) => {
+          const ch = mods.shift ? c.toUpperCase() : c;
+          return { label: ch, onTap: () => tapChar(ch, c) };
+        });
+        if (idx === 2) {
+          keys.unshift({
+            label: 'Shift', cls: 'util wide', pressed: mods.shift,
+            lock: shiftLock, onTap: () => toggleMod('shift')
+          });
+        }
+        rows.push(keys);
+      });
+    }
+
+    rows.push([
+      { label: symbolLayer ? 'abc' : '記号', cls: 'util wide',
+        onTap: () => { symbolLayer = !symbolLayer; renderKeyboard(); } },
+      { label: '←', onTap: () => tapKey('left') },
+      { label: '↑', onTap: () => tapKey('up') },
+      { label: '↓', onTap: () => tapKey('down') },
+      { label: '→', onTap: () => tapKey('right') },
+      { label: 'Space', cls: 'space', onTap: () => tapChar(' ', 'space') },
+      { label: 'BS', onTap: () => tapKey('backspace') },
+      { label: 'Enter', cls: 'wide', onTap: () => tapKey('enter') }
+    ]);
+
+    kbKeys.textContent = '';
+    rows.forEach((row) => {
+      const el = document.createElement('div');
+      el.className = 'kbd-row';
+      row.forEach((spec) => el.appendChild(makeKey(spec)));
+      kbKeys.appendChild(el);
+    });
+  }
+
+  function setKbMode(useText, focus) {
+    kbText.hidden = !useText;
+    kbKeys.hidden = useText;
+    $('kb-mode-keys').setAttribute('aria-pressed', String(!useText));
+    $('kb-mode-text').setAttribute('aria-pressed', String(useText));
+    if (useText && focus) typebox.focus(); else typebox.blur();
+    try { localStorage.setItem('remotepad.kbmode', useText ? 'text' : 'keys'); } catch (e) {}
+  }
+  $('kb-mode-keys').onclick = () => setKbMode(false, false);
+  $('kb-mode-text').onclick = () => setKbMode(true, true);
+
+  $('kb-open').onclick = () => { kb.hidden = false; if (!kbText.hidden) typebox.focus(); };
   $('kb-close').onclick = () => { kb.hidden = true; typebox.blur(); };
+
+  renderKeyboard();
+  let savedKbMode = null;
+  try { savedKbMode = localStorage.getItem('remotepad.kbmode'); } catch (e) {}
+  setKbMode(savedKbMode === 'text', false);
 
   let lastVal = '';
   typebox.addEventListener('input', () => {
