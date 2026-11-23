@@ -20,6 +20,7 @@
     tapClick: true,   // a tap on the pad clicks
     shotWidth: 1024,  // capture width in pixels
     compact: false,   // hide the click row and scroll strip
+    rotate: false,    // turn the capture 90 degrees to fill a portrait screen
     haptics: true
   };
   const S = Object.assign({}, DEFAULTS);
@@ -135,10 +136,14 @@
   function showTab(name) {
     views.pad.hidden = name !== 'pad';
     views.screen.hidden = name !== 'screen';
+    document.body.classList.toggle('tab-screen', name === 'screen');
     $('tab-pad').setAttribute('aria-selected', String(name === 'pad'));
     $('tab-screen').setAttribute('aria-selected', String(name === 'screen'));
-    if (name === 'screen') { if (!streaming) refreshShot(); else requestFrame(true); }
-    else if (streaming) setLive(false);
+    if (name === 'screen') { layoutShot(); if (!streaming) refreshShot(); else requestFrame(true); }
+    else {
+      if (streaming) setLive(false);
+      if (document.body.classList.contains('immersive')) setImmersive(false);
+    }
   }
   $('tab-pad').onclick = () => showTab('pad');
   $('tab-screen').onclick = () => showTab('screen');
@@ -277,6 +282,7 @@
     let resized = false;
     if (shot.width !== m.w || shot.height !== m.h) {
       shot.width = m.w; shot.height = m.h;        // resizing clears the canvas
+      shotWrap.style.setProperty('--shot-ar', m.w + ' / ' + m.h);
       resized = true;
     }
 
@@ -293,6 +299,7 @@
 
     shot.hidden = false;
     shotPh.hidden = true;
+    if (resized) layoutShot();
 
     const now = performance.now();
     frameTimes.push(now);
@@ -321,6 +328,7 @@
     $('auto-off').setAttribute('aria-pressed', String(!on));
     $('auto-live').setAttribute('aria-pressed', String(on));
     statsEl.classList.toggle('live', on);
+    $('imm-live').setAttribute('aria-pressed', String(on));
     if (on) {
       frameTimes = []; bytesAcc = 0; statsAt = performance.now();
       if (!awaiting) requestFrame(true);
@@ -331,15 +339,30 @@
   $('auto-off').onclick = () => setLive(false);
   $('auto-live').onclick = () => setLive(true);
 
-  /* map a touch on the canvas (object-fit: contain) to normalised screen coords */
+  /* size the canvas so its box is exactly the image, rotated 90 degrees when
+     asked, and keep the touch mapping in step with it */
+  function layoutShot() {
+    const rotated = S.rotate && !views.screen.hidden;
+    shot.classList.toggle('rot', rotated);
+    if (!rotated) { shot.style.width = ''; shot.style.height = ''; return; }
+    const r = shotWrap.getBoundingClientRect();
+    const ar = shot.width / shot.height;
+    // rotated, a w x h box covers h across and w down, so fit those instead
+    const h = Math.max(1, Math.min(r.width, r.height / ar));
+    shot.style.width = (h * ar) + 'px';
+    shot.style.height = h + 'px';
+  }
+
   function shotCoords(e) {
     if (!shot.width) return null;
-    const r = shot.getBoundingClientRect();
-    const scale = Math.min(r.width / shot.width, r.height / shot.height);
-    const w = shot.width * scale, h = shot.height * scale;
-    const x = (e.clientX - (r.left + (r.width - w) / 2)) / w;
-    const y = (e.clientY - (r.top + (r.height - h) / 2)) / h;
-    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    const r = shot.getBoundingClientRect();   // already includes the rotation
+    if (!r.width || !r.height) return null;
+    const u = (e.clientX - r.left) / r.width;
+    const v = (e.clientY - r.top) / r.height;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return null;
+    // a quarter turn clockwise sends local (a,b) to (H-b, a) on screen
+    const x = S.rotate ? v : u;
+    const y = S.rotate ? 1 - u : v;
     return { x, y };
   }
   function markAt(e) {
@@ -637,6 +660,84 @@
   $('kb-open').addEventListener('click', () => { settingsSheet.hidden = true; });
 
   applySettings();
+
+  /* ------------------------------------------------- fullscreen / immersive */
+  const immBar = $('imm-bar');
+  const standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                     window.navigator.standalone === true;
+  const canFullscreen = !!(document.documentElement.requestFullscreen ||
+                           document.documentElement.webkitRequestFullscreen);
+
+  async function enterFullscreen() {
+    const el = document.documentElement;
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!fn) return false;
+    try { await fn.call(el, { navigationUI: 'hide' }); return true; } catch (e) { return false; }
+  }
+  async function leaveFullscreen() {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen;
+    if (!fn || !(document.fullscreenElement || document.webkitFullscreenElement)) return;
+    try { await fn.call(document); } catch (e) {}
+  }
+  const inFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+  function homeScreenHint() {
+    toast(standalone
+      ? 'この端末では既にアドレスバーは出ていません'
+      : 'iPhone は共有メニューの「ホーム画面に追加」で URL バーが消えます');
+  }
+
+  $('fs-toggle').onclick = async () => {
+    if (inFullscreen()) { await leaveFullscreen(); return; }
+    if (!await enterFullscreen()) homeScreenHint();
+  };
+  if (standalone && !canFullscreen) $('fs-toggle').hidden = true;
+
+  async function setImmersive(on) {
+    document.body.classList.toggle('immersive', on);
+    immBar.hidden = !on;
+    if (on) {
+      if (views.screen.hidden) showTab('screen');
+      await enterFullscreen();
+      try { await (screen.orientation && screen.orientation.lock('landscape')); } catch (e) {}
+      if (!inFullscreen() && !standalone) homeScreenHint();
+      $('imm-rotate').setAttribute('aria-pressed', String(S.rotate));
+      layoutShot();
+      requestFrame(true);
+      if (!S.rotate && window.innerHeight > window.innerWidth) {
+        toast('「回転」で縦画面いっぱいに表示できます');
+      }
+    } else {
+      try { screen.orientation && screen.orientation.unlock(); } catch (e) {}
+      await leaveFullscreen();
+      layoutShot();
+      requestFrame(true);
+    }
+  }
+  const immersive = () => document.body.classList.contains('immersive');
+
+  $('shot-max').onclick = () => setImmersive(true);
+  $('imm-exit').onclick = () => setImmersive(false);
+  $('imm-rotate').onclick = () => {
+    S.rotate = !S.rotate;
+    saveSettings(); layoutShot(); buzz(8);
+    $('imm-rotate').setAttribute('aria-pressed', String(S.rotate));
+    toast(S.rotate ? '映像を 90 度回転しました' : '回転を戻しました');
+  };
+  $('imm-kb').onclick = () => { kb.hidden = false; if (!kbText.hidden) typebox.focus(); };
+  $('imm-live').onclick = () => setLive(!streaming);
+
+  document.addEventListener('fullscreenchange', () => {
+    $('fs-toggle').setAttribute('aria-pressed', String(inFullscreen()));
+    // leaving fullscreen with a system gesture should leave the immersive view too
+    if (!inFullscreen() && immersive()) setImmersive(false);
+  });
+
+  // the canvas keeps its pixel size, but its box changes on rotate
+  window.addEventListener('resize', () => {
+    layoutShot();
+    if (immersive()) requestFrame(false);
+  });
 
   document.addEventListener('gesturestart', (e) => e.preventDefault());
   showTab('pad');

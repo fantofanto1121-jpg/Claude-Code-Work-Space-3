@@ -35,6 +35,7 @@
   <span class="dot" id="dot"></span>
   <span class="host" id="host">—</span>
   <span class="lat" id="lat"></span>
+  <button class="chip" id="fs-toggle">全画面</button>
   <button class="chip" id="settings-open">設定</button>
   <button class="chip" id="disconnect" title="切断">切断</button>
 </header>
@@ -63,8 +64,9 @@
       <span class="ping-mark" id="ping-mark"></span>
     </div>
     <div class="shot-bar">
-      <button class="btn" id="shot-refresh">再取得</button>
+      <button class="btn" id="shot-max">最大化</button>
       <div class="chiprow">
+        <button class="chip" id="shot-refresh">再取得</button>
         <button class="chip" id="auto-off" aria-pressed="true">停止</button>
         <button class="chip" id="auto-live" aria-pressed="false">ライブ</button>
       </div>
@@ -162,6 +164,13 @@
   </div>
 
   <button class="btn" id="settings-reset">初期設定に戻す</button>
+</div>
+
+<div class="imm-bar" id="imm-bar" hidden>
+  <button class="imm-chip" id="imm-rotate">回転</button>
+  <button class="imm-chip" id="imm-live">ライブ</button>
+  <button class="imm-chip" id="imm-kb">キーボード</button>
+  <button class="imm-chip" id="imm-exit">戻る</button>
 </div>
 
 <div class="toast" id="toast"></div>

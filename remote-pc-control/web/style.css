@@ -188,12 +188,23 @@ main > section[hidden] { display: none; }
 /* screen view */
 .shot-wrap {
   position: relative; flex: 0 1 auto; min-height: 140px;
+  /* a definite height, so the canvas max-height below has something to
+     resolve against and the capture can never overflow the screen */
+  width: 100%; aspect-ratio: var(--shot-ar, 16 / 9); max-height: 100%;
   border-radius: var(--radius); border: 1px solid var(--line-strong);
   background: var(--surface); box-shadow: var(--shadow);
   overflow: hidden; touch-action: none;
-  display: grid; place-items: center;
+  display: flex; align-items: center; justify-content: center;
 }
-.shot-wrap canvas { width: 100%; height: auto; max-height: 100%; display: block; image-rendering: auto; }
+.shot-wrap canvas {
+  display: block; width: auto; height: auto;
+  max-width: 100%; max-height: 100%; image-rendering: auto;
+}
+.shot-wrap canvas.rot {
+  position: absolute; left: 50%; top: 50%;
+  max-width: none; max-height: none;
+  transform-origin: center; transform: translate(-50%, -50%) rotate(90deg);
+}
 .shot-wrap .placeholder { font-size: 12px; color: var(--muted); }
 .ping-mark {
   position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px;
@@ -317,6 +328,53 @@ main > section[hidden] { display: none; }
 .seg-mini { display: flex; gap: 5px; }
 .seg-mini .chip { padding: 8px 9px; font-size: 12px; }
 body.compact .dock .row.clicks, body.compact .dock .scroll-strip { display: none; }
+
+/* a phone held sideways has very little height: tighten everything so the
+   dock cannot overlap the content */
+@media (max-height: 540px) {
+  .bar { padding: 7px 12px 5px; }
+  .seg { margin: 0 12px 7px; padding: 3px; }
+  .seg button { padding: 6px 8px; font-size: 12px; }
+  main { padding: 0 12px; }
+  .pad-hint { display: none; }
+  .shot-wrap { min-height: 72px; }
+  .shot-bar .btn, .shot-bar .chip { padding: 8px 10px; font-size: 12px; }
+  .dock { padding: 7px 12px calc(7px + env(safe-area-inset-bottom)); gap: 6px; }
+  .mbtn { padding: 9px 6px; font-size: 12px; }
+  .mbtn small { display: none; }
+  .scroll-strip { height: 32px; font-size: 10px; }
+  .stats { font-size: 10px; }
+  /* sideways on the screen tab, the dock costs more than it gives */
+  body.tab-screen .dock { display: none; }
+}
+
+/* immersive screen view: the capture fills the device, nothing else shows */
+body.immersive { padding: 0; }
+body.immersive .bar,
+body.immersive .seg,
+body.immersive .dock,
+body.immersive .shot-bar,
+body.immersive .stats { display: none; }
+body.immersive main { padding: 0; }
+body.immersive main > section { gap: 0; }
+body.immersive .shot-wrap {
+  flex: 1; min-height: 0; max-height: none; aspect-ratio: auto;
+  border: 0; border-radius: 0; box-shadow: none; background: #000;
+}
+body.immersive .shot-wrap { display: flex; align-items: center; justify-content: center; }
+
+.imm-bar {
+  position: fixed; z-index: 25; display: flex; gap: 6px;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+}
+.imm-chip {
+  font: inherit; font-size: 12px; color: var(--text);
+  background: rgba(16, 19, 25, .74); border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 9px; padding: 8px 11px; cursor: pointer;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.imm-chip[aria-pressed="true"] { background: rgba(127, 158, 198, .8); color: #0c1016; border-color: transparent; }
 
 .toast {
   position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
