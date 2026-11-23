@@ -95,12 +95,53 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: remote-pad-latest
+          FILE: remote-pc-control/dist/RemotePad.exe
+          NOTES: "Windows 用の Remote Pad エージェントです。RemotePad.exe をダウンロードして実行すると、URL と 6 桁 PIN が表示されます。同じ Wi-Fi のスマホからその URL を開いてください。Python のインストールは不要です。初回起動時は Windows Defender SmartScreen の警告が出ます（署名していないため）。「詳細情報」から「実行」を選んでください。"
         run: |
-          tag="remote-pad-latest"
-          gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$tag" \
-            remote-pc-control/dist/RemotePad.exe \
-            --target "$GITHUB_SHA" \
-            --title "Remote Pad (Windows)" \
-            --prerelease \
-            --notes "Windows 用の Remote Pad エージェントです。RemotePad.exe をダウンロードして実行すると、URL と 6 桁 PIN が表示されます。同じ Wi-Fi のスマホからその URL を開いてください。Python のインストールは不要です。初回起動時は Windows Defender SmartScreen の警告が出ます（署名していないため）。「詳細情報」から「実行」を選んでください。"
+          set -euo pipefail
+
+          # Keep the tag on this commit. Deleting and recreating the release
+          # instead leaves it as an untagged draft, so the release object is
+          # reused and only its asset is replaced.
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" \
+                 -f sha="$GITHUB_SHA" -F force=true >/dev/null 2>&1 \
+            || gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                      -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA" >/dev/null
+
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+               --jq "map(select(.tag_name==\"$TAG\")) | .[0].id // empty")
+
+          if [ -n "$id" ]; then
+            echo "reusing release $id"
+            gh release upload "$TAG" "$FILE" --clobber
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" \
+                   -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
+                   -f name="Remote Pad (Windows)" -f body="$NOTES" \
+                   -F draft=false -F prerelease=true >/dev/null
+          else
+            echo "creating a new release"
+            gh release create "$TAG" "$FILE" --target "$GITHUB_SHA" \
+              --title "Remote Pad (Windows)" --prerelease --notes "$NOTES"
+          fi
+
+      - name: Verify the release is downloadable
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: remote-pad-latest
+        run: |
+          set -euo pipefail
+          # A draft release is invisible to anyone following the download link,
+          # so fail the build rather than report a success nobody can use.
+          rel=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")
+          draft=$(echo "$rel" | jq -r '.draft')
+          url=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad.exe") | .browser_download_url')
+          size=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad.exe") | .size')
+          digest=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad.exe") | .digest')
+          [ "$draft" = "false" ] || { echo "the release is still a draft"; exit 1; }
+          [ -n "$url" ] || { echo "RemotePad.exe is not attached"; exit 1; }
+          case "$url" in *untagged-*) echo "the release has no tag: $url"; exit 1 ;; esac
+          echo "download : $url"
+          echo "size     : $size bytes"
+          echo "sha256   : $digest"
