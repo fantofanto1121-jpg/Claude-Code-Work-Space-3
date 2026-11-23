@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Remote Pad</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="brand">
+      <span class="mark"></span>
+      <div>
+        <h1>Remote Pad</h1>
+        <p id="gate-host">接続先を確認中…</p>
+      </div>
+    </div>
+    <label class="field">
+      <span>PIN コード</span>
+      <input id="pin" type="text" inputmode="numeric" autocomplete="off"
+             maxlength="6" placeholder="000000">
+    </label>
+    <button class="btn primary" id="connect">接続する</button>
+    <p class="msg" id="gate-msg">PC のウィンドウに表示された 6 桁を入力</p>
+  </div>
+</div>
+
+<header class="bar">
+  <span class="dot" id="dot"></span>
+  <span class="host" id="host">—</span>
+  <span class="lat" id="lat"></span>
+  <button class="chip" id="disconnect" title="切断">切断</button>
+</header>
+
+<nav class="seg" role="tablist">
+  <button role="tab" id="tab-pad" aria-selected="true">トラックパッド</button>
+  <button role="tab" id="tab-screen" aria-selected="false">画面</button>
+</nav>
+
+<main>
+  <section id="view-pad">
+    <div class="pad" id="pad">
+      <div class="spot" id="spot"></div>
+      <div class="pad-hint">
+        1 本指でカーソル移動 / タップでクリック<br>
+        2 本指でスクロール・タップで右クリック<br>
+        長押しでドラッグ固定
+      </div>
+    </div>
+  </section>
+
+  <section id="view-screen" hidden>
+    <div class="shot-wrap" id="shot-wrap">
+      <span class="placeholder" id="shot-ph">画面を取得します</span>
+      <img id="shot" alt="" hidden>
+      <span class="ping-mark" id="ping-mark"></span>
+    </div>
+    <div class="shot-bar">
+      <button class="btn" id="shot-refresh">再取得</button>
+      <div class="chiprow">
+        <button class="chip" id="auto-off" aria-pressed="true">停止</button>
+        <button class="chip" id="auto-1" aria-pressed="false">1秒</button>
+        <button class="chip" id="auto-3" aria-pressed="false">3秒</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="dock">
+  <div class="row">
+    <button class="mbtn" data-btn="left">左クリック<small>タップでも可</small></button>
+    <button class="mbtn" data-btn="middle">中<small>ホイール</small></button>
+    <button class="mbtn" data-btn="right">右クリック<small>メニュー</small></button>
+  </div>
+  <div class="scroll-strip" id="strip">上下にドラッグしてスクロール</div>
+  <div class="row">
+    <button class="mbtn" id="kb-open">キーボード</button>
+    <button class="mbtn" id="drag-lock" aria-pressed="false">ドラッグ固定<small>左ボタンを保持</small></button>
+  </div>
+</footer>
+
+<div class="sheet" id="kb" hidden>
+  <div class="sheet-head">
+    <h2>キーボード</h2>
+    <button class="chip" id="kb-close">閉じる</button>
+  </div>
+  <input id="typebox" type="text" autocomplete="off" autocapitalize="off"
+         spellcheck="false" placeholder="ここに入力すると PC に送られます">
+  <div class="keys" id="keys"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
