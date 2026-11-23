@@ -24,10 +24,13 @@ jobs:
       - name: Install PyInstaller
         run: python -m pip install --upgrade pip pyinstaller
 
-      - name: Build RemotePad.exe
+      # --onedir avoids the single file bootloader that unpacks itself into a
+      # temp folder at launch, which is what antivirus heuristics flag. --noupx
+      # keeps the binaries uncompressed for the same reason.
+      - name: Build RemotePad
         working-directory: remote-pc-control
         run: >
-          pyinstaller --onefile --console --clean
+          pyinstaller --onedir --console --clean --noupx
           --name RemotePad
           --add-data "web;web"
           --paths agent
@@ -37,7 +40,7 @@ jobs:
         working-directory: remote-pc-control
         shell: pwsh
         run: |
-          $agent = Start-Process -FilePath dist\RemotePad.exe `
+          $agent = Start-Process -FilePath dist\RemotePad\RemotePad.exe `
                -ArgumentList '--host','127.0.0.1','--port','8791','--pin','424242' `
                -PassThru -WindowStyle Hidden
           Start-Sleep -Seconds 6
@@ -85,10 +88,17 @@ jobs:
             Stop-Process -Id $agent.Id -Force -ErrorAction SilentlyContinue
           }
 
+      - name: Package the folder
+        working-directory: remote-pc-control
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\RemotePad -DestinationPath dist\RemotePad-windows.zip -Force
+          Write-Host "zip: $((Get-Item dist\RemotePad-windows.zip).Length) bytes"
+
       - uses: actions/upload-artifact@v4
         with:
           name: RemotePad-windows
-          path: remote-pc-control/dist/RemotePad.exe
+          path: remote-pc-control/dist/RemotePad-windows.zip
           if-no-files-found: error
 
       - name: Publish as a release asset
@@ -96,8 +106,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: remote-pad-latest
-          FILE: remote-pc-control/dist/RemotePad.exe
-          NOTES: "Windows 用の Remote Pad エージェントです。RemotePad.exe をダウンロードして実行すると、URL と 6 桁 PIN が表示されます。同じ Wi-Fi のスマホからその URL を開いてください。Python のインストールは不要です。初回起動時は Windows Defender SmartScreen の警告が出ます（署名していないため）。「詳細情報」から「実行」を選んでください。"
+          FILE: remote-pc-control/dist/RemotePad-windows.zip
+          NOTES: "Windows 用の Remote Pad エージェントです。RemotePad-windows.zip を展開し、中の RemotePad フォルダごと好きな場所に置いて RemotePad.exe を実行してください。URL と 6 桁 PIN が表示されるので、同じ Wi-Fi のスマホからその URL を開きます。Python のインストールは不要です。署名していないため SmartScreen の警告が出ます（詳細情報 → 実行）。ウイルス対策に隔離された場合は誤検知です。Windows セキュリティ → ウイルスと脅威の防止 → 保護の履歴 から復元し、置いたフォルダを除外に追加してください。"
         run: |
           set -euo pipefail
 
@@ -115,6 +125,8 @@ jobs:
           if [ -n "$id" ]; then
             echo "reusing release $id"
             gh release upload "$TAG" "$FILE" --clobber
+            # the old single file build is no longer what we ship
+            gh release delete-asset "$TAG" RemotePad.exe --yes 2>/dev/null || true
             gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" \
                    -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
                    -f name="Remote Pad (Windows)" -f body="$NOTES" \
@@ -136,11 +148,11 @@ jobs:
           # so fail the build rather than report a success nobody can use.
           rel=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")
           draft=$(echo "$rel" | jq -r '.draft')
-          url=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad.exe") | .browser_download_url')
-          size=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad.exe") | .size')
-          digest=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad.exe") | .digest')
+          url=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad-windows.zip") | .browser_download_url')
+          size=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad-windows.zip") | .size')
+          digest=$(echo "$rel" | jq -r '.assets[] | select(.name=="RemotePad-windows.zip") | .digest')
           [ "$draft" = "false" ] || { echo "the release is still a draft"; exit 1; }
-          [ -n "$url" ] || { echo "RemotePad.exe is not attached"; exit 1; }
+          [ -n "$url" ] || { echo "RemotePad-windows.zip is not attached"; exit 1; }
           case "$url" in *untagged-*) echo "the release has no tag: $url"; exit 1 ;; esac
           echo "download : $url"
           echo "size     : $size bytes"
