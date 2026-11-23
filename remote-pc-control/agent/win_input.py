@@ -7,7 +7,9 @@ the server can be developed and smoke tested anywhere.
 from __future__ import annotations
 
 import ctypes
+import math
 import struct
+import time
 import sys
 import zlib
 
@@ -31,14 +33,14 @@ for _c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789":
     VK[_c.lower()] = ord(_c)
 
 
-def png_encode(width: int, height: int, rgb: bytes) -> bytes:
+def png_encode(width: int, height: int, rgb: bytes, level: int = 6) -> bytes:
     """Minimal PNG writer (8-bit truecolour, filter 0)."""
     stride = width * 3
     rows = bytearray()
     for y in range(height):
         rows.append(0)
         rows += rgb[y * stride:(y + 1) * stride]
-    comp = zlib.compress(bytes(rows), 6)
+    comp = zlib.compress(bytes(rows), level)
 
     def chunk(tag: bytes, data: bytes) -> bytes:
         body = tag + data
@@ -70,14 +72,28 @@ class StubBackend:
     def key(self, name, mods=()): pass
     def type_text(self, text): pass
 
-    def capture(self, max_width=1024):
-        w = max_width
-        h = max(1, int(w * self.virtual[3] / self.virtual[2]))
+    def grab(self, max_width=1024):
+        w = max(2, min(max_width, 1280))
+        h = max(2, round(w * self.virtual[3] / self.virtual[2]))
         row = bytearray()
         for x in range(w):
-            t = int(24 + 40 * x / w)
-            row += bytes((t, t + 3, t + 8))
-        return png_encode(w, h, bytes(row) * h), w, h
+            f = x / w
+            row += bytes((int(40 + 180 * f), int(90 + 110 * (1 - f)), int(190 - 120 * f)))
+        frame = bytearray(bytes(row) * h)
+        # a block that travels, so only a few tiles change between frames
+        bw, bh = max(8, w // 6), max(8, h // 6)
+        phase = time.time() * 0.6
+        bx = int((w - bw) * (0.5 + 0.5 * math.sin(phase)))
+        by = int((h - bh) * (0.5 + 0.5 * math.cos(phase * 0.8)))
+        stripe = bytes((245, 238, 220)) * bw
+        for i in range(bh):
+            off = ((by + i) * w + bx) * 3
+            frame[off:off + bw * 3] = stripe
+        return w, h, bytes(frame)
+
+    def capture(self, max_width=1024):
+        w, h, rgb = self.grab(max_width)
+        return png_encode(w, h, rgb), w, h
 
 
 if not IS_WINDOWS:
@@ -253,7 +269,7 @@ else:
                 self._send(*seq)
 
         # -- capture ----------------------------------------------------
-        def capture(self, max_width=1024):
+        def grab(self, max_width=1024):
             vx, vy, vw, vh = self.refresh_metrics()
             out_w = min(max_width, vw)
             out_w -= out_w % 2
@@ -288,7 +304,11 @@ else:
             rgb[0::3] = bgra[2::4]
             rgb[1::3] = bgra[1::4]
             rgb[2::3] = bgra[0::4]
-            return png_encode(out_w, out_h, bytes(rgb)), out_w, out_h
+            return out_w, out_h, bytes(rgb)
+
+        def capture(self, max_width=1024):
+            w, h, rgb = self.grab(max_width)
+            return png_encode(w, h, rgb), w, h
 
     def make_backend():
         return Win32Backend()

@@ -26,9 +26,10 @@ import sys
 import threading
 import time
 import urllib.parse
+import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from win_input import make_backend  # noqa: E402
+from win_input import make_backend, png_encode  # noqa: E402
 
 FROZEN = getattr(sys, "frozen", False)
 if FROZEN:                                   # bundled by PyInstaller
@@ -41,6 +42,7 @@ MIME = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
         ".png": "image/png", ".webmanifest": "application/manifest+json"}
 
 LOCK = threading.Lock()
+CAPTURE_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 
 
@@ -134,9 +136,44 @@ class WebSocket:
     def send(self, obj) -> None:
         self._frame(0x1, json.dumps(obj, separators=(",", ":")).encode())
 
+    def send_bytes(self, data: bytes) -> None:
+        self._frame(0x2, data)
+
     def close(self) -> None:
         self._frame(0x8, b"")
         self.open = False
+
+
+# ------------------------------------------------------------- frame tiling
+
+TILE = 128
+
+
+def tile_frame(previous, width, height, rgb, tile=TILE, level=4):
+    """Cut a frame into tiles and encode only the ones that changed.
+
+    Returns (tiles, hashes) where each tile is (x, y, w, h, png_bytes).
+    Pass an empty dict as `previous` to force a full frame.
+    """
+    stride = width * 3
+    tiles, hashes = [], {}
+    for ty in range(0, height, tile):
+        th = min(tile, height - ty)
+        for tx in range(0, width, tile):
+            tw = min(tile, width - tx)
+            start = ty * stride + tx * 3
+            span = tw * 3
+            if tw == width:                       # whole rows, no stitching needed
+                chunk = rgb[start:start + th * stride]
+            else:
+                chunk = b"".join(rgb[start + i * stride:start + i * stride + span]
+                                 for i in range(th))
+            key = (tx, ty)
+            digest = zlib.crc32(chunk)
+            hashes[key] = digest
+            if previous.get(key) != digest:
+                tiles.append((tx, ty, tw, th, png_encode(tw, th, chunk, level)))
+    return tiles, hashes
 
 
 # ------------------------------------------------------------------ server
@@ -201,7 +238,7 @@ class Handler(socketserver.StreamRequestHandler):
                 width = max(240, min(1920, int((params.get("w") or ["1100"])[0])))
             except ValueError:
                 width = 1100
-            with LOCK:
+            with CAPTURE_LOCK:
                 png, _, _ = self.server.backend.capture(width)
             return self.reply("200 OK", png, "image/png")
 
@@ -227,6 +264,7 @@ class Handler(socketserver.StreamRequestHandler):
         backend = self.server.backend
         authed = False
         held = set()
+        shot_hashes = {}
         log("connect %s" % peer)
         try:
             while ws.open:
@@ -255,6 +293,24 @@ class Handler(socketserver.StreamRequestHandler):
 
                 if kind == "ping":
                     ws.send({"t": "pong", "id": msg.get("id")})
+                    continue
+
+                if kind == "frame":
+                    try:
+                        width = max(320, min(1600, int(msg.get("w", 960))))
+                    except (TypeError, ValueError):
+                        width = 960
+                    if msg.get("full"):
+                        shot_hashes = {}
+                    with CAPTURE_LOCK:
+                        fw, fh, rgb = backend.grab(width)
+                    tiles, shot_hashes = tile_frame(shot_hashes, fw, fh, rgb)
+                    sent = 0
+                    for tx, ty, tw, th, png in tiles:
+                        ws.send_bytes(struct.pack(">HHHH", tx, ty, tw, th) + png)
+                        sent += len(png)
+                    ws.send({"t": "frame_end", "w": fw, "h": fh, "n": len(tiles),
+                             "bytes": sent, "full": bool(msg.get("full"))})
                     continue
 
                 with LOCK:

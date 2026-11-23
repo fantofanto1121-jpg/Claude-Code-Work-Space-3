@@ -58,17 +58,17 @@
   <section id="view-screen" hidden>
     <div class="shot-wrap" id="shot-wrap">
       <span class="placeholder" id="shot-ph">画面を取得します</span>
-      <img id="shot" alt="" hidden>
+      <canvas id="shot" hidden></canvas>
       <span class="ping-mark" id="ping-mark"></span>
     </div>
     <div class="shot-bar">
       <button class="btn" id="shot-refresh">再取得</button>
       <div class="chiprow">
         <button class="chip" id="auto-off" aria-pressed="true">停止</button>
-        <button class="chip" id="auto-1" aria-pressed="false">1秒</button>
-        <button class="chip" id="auto-3" aria-pressed="false">3秒</button>
+        <button class="chip" id="auto-live" aria-pressed="false">ライブ</button>
       </div>
     </div>
+    <div class="stats" id="stats">停止中</div>
   </section>
 </main>
 

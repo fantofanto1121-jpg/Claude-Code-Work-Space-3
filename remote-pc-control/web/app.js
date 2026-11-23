@@ -6,10 +6,13 @@
   const dot = $('dot'), hostEl = $('host'), latEl = $('lat');
   const pad = $('pad'), spot = $('spot');
   const shot = $('shot'), shotWrap = $('shot-wrap'), shotPh = $('shot-ph'), pingMark = $('ping-mark');
+  const statsEl = $('stats'), ctx2d = shot.getContext('2d', { alpha: false });
   const strip = $('strip'), kb = $('kb'), typebox = $('typebox'), toastEl = $('toast');
 
   let ws = null, pin = '', ready = false, wantOpen = false, retry = 0;
-  let dragLocked = false, autoMs = 0, autoTimer = null, shotBusy = false;
+  let dragLocked = false;
+  let streaming = false, awaiting = false, lastFrameAt = 0;
+  let tileQueue = [], frameTimes = [], bytesAcc = 0, statsAt = 0;
 
   /* ------------------------------------------------------------- utils */
   const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
@@ -33,9 +36,12 @@
     wantOpen = true;
     setState('wait', '接続中…');
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+    ws.binaryType = 'arraybuffer';
     ws.onopen = () => send({ t: 'auth', pin });
     ws.onmessage = (ev) => {
+      if (typeof ev.data !== 'string') { tileQueue.push(ev.data); return; }
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.t === 'frame_end') { drawFrame(m); return; }
       if (m.t === 'ready') {
         ready = true; retry = 0;
         localStorage.setItem('remotepad.pin', pin);
@@ -55,6 +61,7 @@
     ws.onclose = () => {
       const was = ready;
       ready = false; ws = null; latEl.textContent = '';
+      awaiting = false; tileQueue = [];
       setState('', was ? '切断されました' : '—');
       if (wantOpen && was) {
         retry = Math.min(retry + 1, 6);
@@ -65,7 +72,12 @@
     ws.onerror = () => { if (!ready) { gateMsg.textContent = '接続できません'; gateMsg.classList.add('err'); } };
   }
 
-  setInterval(() => ready && send({ t: 'ping', id: performance.now() }), 2000);
+  setInterval(() => {
+    if (!ready) return;
+    send({ t: 'ping', id: performance.now() });
+    // a frame that never came back should not stall the stream
+    if (streaming && awaiting && performance.now() - lastFrameAt > 3000) requestFrame(true);
+  }, 2000);
 
   fetch('api/info').then((r) => r.json()).then((d) => {
     gateHost.textContent = d.host + ' / ' + d.screen.w + '×' + d.screen.h;
@@ -100,7 +112,8 @@
     views.screen.hidden = name !== 'screen';
     $('tab-pad').setAttribute('aria-selected', String(name === 'pad'));
     $('tab-screen').setAttribute('aria-selected', String(name === 'screen'));
-    if (name === 'screen') refreshShot();
+    if (name === 'screen') { if (!streaming) refreshShot(); else requestFrame(true); }
+    else if (streaming) setLive(false);
   }
   $('tab-pad').onclick = () => showTab('pad');
   $('tab-screen').onclick = () => showTab('screen');
@@ -219,38 +232,86 @@
 
   /* ----------------------------------------------------------- screen */
   function shotWidth() {
-    const w = shotWrap.clientWidth * (window.devicePixelRatio || 1);
-    return Math.max(480, Math.min(1600, Math.round(w)));
+    const css = shotWrap.clientWidth * (window.devicePixelRatio || 1);
+    const cap = streaming ? 1024 : 1280;
+    return Math.max(480, Math.min(cap, Math.round(css)));
   }
-  function refreshShot() {
-    if (!ready || shotBusy || views.screen.hidden) return;
-    shotBusy = true;
-    const img = new Image();
-    img.onload = () => {
-      shot.src = img.src; shot.hidden = false; shotPh.hidden = true;
-      shotBusy = false;
-    };
-    img.onerror = () => { shotBusy = false; shotPh.textContent = '画面を取得できません'; };
-    img.src = 'api/shot?pin=' + encodeURIComponent(pin) + '&w=' + shotWidth() + '&_=' + Date.now();
+
+  function requestFrame(full) {
+    if (!ready || views.screen.hidden) { awaiting = false; return; }
+    awaiting = true;
+    send({ t: 'frame', w: shotWidth(), full: !!full });
   }
+
+  async function drawFrame(m) {
+    awaiting = false;
+    lastFrameAt = performance.now();
+    const items = tileQueue;
+    tileQueue = [];
+
+    let resized = false;
+    if (shot.width !== m.w || shot.height !== m.h) {
+      shot.width = m.w; shot.height = m.h;        // resizing clears the canvas
+      resized = true;
+    }
+
+    for (const buf of items) {
+      const head = new DataView(buf);
+      const x = head.getUint16(0), y = head.getUint16(2);
+      try {
+        const blob = new Blob([new Uint8Array(buf, 8)], { type: 'image/png' });
+        const bmp = await createImageBitmap(blob);
+        ctx2d.drawImage(bmp, x, y);
+        if (bmp.close) bmp.close();
+      } catch (e) { /* skip a tile that failed to decode */ }
+    }
+
+    shot.hidden = false;
+    shotPh.hidden = true;
+
+    const now = performance.now();
+    frameTimes.push(now);
+    if (frameTimes.length > 12) frameTimes.shift();
+    bytesAcc += m.bytes || 0;
+    if (now - statsAt > 700) {
+      const span = (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000;
+      const fps = span > 0 ? (frameTimes.length - 1) / span : 0;
+      const kbs = bytesAcc / ((now - statsAt) / 1000) / 1024;
+      statsEl.textContent = streaming
+        ? fps.toFixed(0) + ' fps · ' + kbs.toFixed(0) + ' KB/s · ' + m.w + '×' + m.h
+        : m.w + '×' + m.h + ' · ' + Math.round((m.bytes || 0) / 1024) + ' KB';
+      bytesAcc = 0; statsAt = now;
+    }
+
+    // resizing cleared the canvas, so a partial frame has to be re-asked in full
+    if (resized && !m.full) { requestFrame(true); return; }
+    if (streaming) setTimeout(() => requestFrame(false), 40);
+  }
+
+  function refreshShot() { requestFrame(true); }
   $('shot-refresh').onclick = refreshShot;
 
-  function setAuto(ms, el) {
-    autoMs = ms;
-    ['auto-off', 'auto-1', 'auto-3'].forEach((id) => $(id).setAttribute('aria-pressed', String($(id) === el)));
-    clearInterval(autoTimer);
-    if (ms) autoTimer = setInterval(refreshShot, ms);
+  function setLive(on) {
+    streaming = on;
+    $('auto-off').setAttribute('aria-pressed', String(!on));
+    $('auto-live').setAttribute('aria-pressed', String(on));
+    statsEl.classList.toggle('live', on);
+    if (on) {
+      frameTimes = []; bytesAcc = 0; statsAt = performance.now();
+      if (!awaiting) requestFrame(true);
+    } else {
+      statsEl.textContent = '停止中';
+    }
   }
-  $('auto-off').onclick = (e) => setAuto(0, e.currentTarget);
-  $('auto-1').onclick = (e) => setAuto(1000, e.currentTarget);
-  $('auto-3').onclick = (e) => setAuto(3000, e.currentTarget);
+  $('auto-off').onclick = () => setLive(false);
+  $('auto-live').onclick = () => setLive(true);
 
-  /* map a touch on the <img> (object-fit: contain) to normalised screen coords */
+  /* map a touch on the canvas (object-fit: contain) to normalised screen coords */
   function shotCoords(e) {
-    if (!shot.naturalWidth) return null;
+    if (!shot.width) return null;
     const r = shot.getBoundingClientRect();
-    const scale = Math.min(r.width / shot.naturalWidth, r.height / shot.naturalHeight);
-    const w = shot.naturalWidth * scale, h = shot.naturalHeight * scale;
+    const scale = Math.min(r.width / shot.width, r.height / shot.height);
+    const w = shot.width * scale, h = shot.height * scale;
     const x = (e.clientX - (r.left + (r.width - w) / 2)) / w;
     const y = (e.clientY - (r.top + (r.height - h) / 2)) / h;
     if (x < 0 || x > 1 || y < 0 || y > 1) return null;
@@ -279,7 +340,7 @@
         send({ t: 'abs', x: c.x, y: c.y });
         send({ t: 'btn', b: 'right', s: 'click' });
         markAt(e); buzz(18); toast('右クリック');
-        setTimeout(refreshShot, 260);
+        if (!streaming) setTimeout(() => requestFrame(false), 260);
       }
     }, 520);
   });
@@ -309,7 +370,7 @@
         send({ t: 'abs', x: c.x, y: c.y });
         send({ t: 'btn', b: 'left', s: 'click' });
         markAt(e); buzz(8);
-        setTimeout(refreshShot, 280);
+        if (!streaming) setTimeout(() => requestFrame(false), 280);
       }
     }
     shotScroll = 0;
