@@ -1,0 +1,86 @@
+name: Build Remote Pad (Windows exe)
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "remote-pc-control/**"
+      - ".github/workflows/build-remote-pad.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Build RemotePad.exe
+        working-directory: remote-pc-control
+        run: >
+          pyinstaller --onefile --console --clean
+          --name RemotePad
+          --add-data "web;web"
+          --paths agent
+          agent/pc_agent.py
+
+      - name: Smoke test the binary
+        working-directory: remote-pc-control
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\RemotePad.exe `
+               -ArgumentList '--host','127.0.0.1','--port','8791','--pin','424242' `
+               -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 6
+          try {
+            $info = Invoke-RestMethod 'http://127.0.0.1:8791/api/info'
+            Write-Host "info: $($info | ConvertTo-Json -Compress)"
+            if ($info.backend -ne 'win32') { throw "expected the win32 backend, got $($info.backend)" }
+
+            $page = Invoke-WebRequest 'http://127.0.0.1:8791/' -UseBasicParsing
+            if ($page.StatusCode -ne 200) { throw "the UI was not served" }
+            Write-Host "index.html: $($page.RawContentLength) bytes"
+
+            $bad = $null
+            try { Invoke-WebRequest 'http://127.0.0.1:8791/api/shot?pin=000000' -UseBasicParsing }
+            catch { $bad = $_.Exception.Response.StatusCode.value__ }
+            if ($bad -ne 403) { throw "a wrong PIN should be refused, got $bad" }
+
+            Invoke-WebRequest 'http://127.0.0.1:8791/api/shot?pin=424242&w=640' `
+              -UseBasicParsing -OutFile shot.png
+            $sig = [System.IO.File]::ReadAllBytes("$PWD\shot.png")[0..3]
+            if (($sig -join ',') -ne '137,80,78,71') { throw "the capture is not a PNG" }
+            Write-Host "capture: $((Get-Item shot.png).Length) bytes of PNG"
+            Write-Host "smoke test passed"
+          } finally {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RemotePad-windows
+          path: remote-pc-control/dist/RemotePad.exe
+          if-no-files-found: error
+
+      - name: Publish as a release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="remote-pad-latest"
+          gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$tag" \
+            remote-pc-control/dist/RemotePad.exe \
+            --target "$GITHUB_SHA" \
+            --title "Remote Pad (Windows)" \
+            --prerelease \
+            --notes "Windows 用の Remote Pad エージェントです。RemotePad.exe をダウンロードして実行すると、URL と 6 桁 PIN が表示されます。同じ Wi-Fi のスマホからその URL を開いてください。Python のインストールは不要です。初回起動時は Windows Defender SmartScreen の警告が出ます（署名していないため）。「詳細情報」から「実行」を選んでください。"

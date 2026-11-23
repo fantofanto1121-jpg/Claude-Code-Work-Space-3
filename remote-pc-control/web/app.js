@@ -79,8 +79,11 @@
     connect(v);
   };
   $('pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('connect').click(); });
-  const saved = localStorage.getItem('remotepad.pin');
-  if (saved) { $('pin').value = saved; connect(saved); }
+  const qp = new URLSearchParams(location.search);
+  const fromUrl = qp.get('pin');
+  if (fromUrl) history.replaceState(null, '', location.pathname);   // keep the PIN out of the address bar
+  const initialPin = fromUrl || localStorage.getItem('remotepad.pin');
+  if (initialPin) { $('pin').value = initialPin; connect(initialPin); }
 
   $('disconnect').onclick = () => {
     wantOpen = false;

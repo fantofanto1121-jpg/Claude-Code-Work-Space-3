@@ -30,7 +30,11 @@ import urllib.parse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from win_input import make_backend  # noqa: E402
 
-WEB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
+FROZEN = getattr(sys, "frozen", False)
+if FROZEN:                                   # bundled by PyInstaller
+    WEB_DIR = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(sys.executable)), "web")
+else:
+    WEB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 MIME = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
         ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml",
@@ -318,5 +322,26 @@ def main() -> int:
     return 0
 
 
+def _hold() -> None:
+    """Keep the console open when the packaged exe is double clicked."""
+    if FROZEN:
+        try:
+            input("\nEnter キーで閉じます... ")
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        code = main()
+    except OSError as exc:
+        print("\n起動できませんでした: %s" % exc)
+        print("ポートが既に使われている場合は --port 8788 のように変更してください。")
+        _hold()
+        raise SystemExit(1)
+    except Exception as exc:                      # noqa: BLE001
+        print("\n予期しないエラー: %r" % (exc,))
+        _hold()
+        raise SystemExit(1)
+    _hold()
+    raise SystemExit(code)

@@ -9,10 +9,26 @@
   PC 画面のキャプチャをタップして狙った位置をクリックする 2 つのモードがあります。
 - **認証**: 起動のたびに 6 桁 PIN を生成。PIN なしでは入力も画面取得もできません。
 
+## 入手方法
+
+### A. exe をダウンロードする（Python 不要）
+
+GitHub の Releases にある `remote-pad-latest` から **RemotePad.exe** を落として
+ダブルクリックするだけです。Windows ランナーで PyInstaller によりビルドされ、
+起動・画面取得・PIN 拒否の自動テストを通ったものだけが公開されます。
+
+初回起動時は署名なしのため Windows Defender SmartScreen の警告が出ます。
+「詳細情報」→「実行」で起動してください。
+
+### B. ソースから動かす
+
+`agent\start.bat` をダブルクリック、または `python agent\pc_agent.py`。
+
 ## 必要なもの
 
-- 操作される PC: Windows 10 / 11 と Python 3.8 以降
-  （未インストールなら python.org の installer で「Add python.exe to PATH」にチェック）
+- 操作される PC: Windows 10 / 11
+  （exe を使う場合は Python 不要。ソースから動かす場合は Python 3.8 以降で、
+  python.org の installer の「Add python.exe to PATH」にチェック）
 - 操作する端末: 同じ Wi-Fi につながったスマホなどのモダンブラウザ
 
 ## 起動
@@ -28,7 +44,11 @@ python agent\pc_agent.py --port 9000 --pin 123456
 ```
 
 `--pin` を省略すると毎回ランダムな PIN になります。`--host 127.0.0.1` を指定すると
-その PC 自身からのみ接続できます。
+その PC 自身からのみ接続できます。exe も同じオプションを受け付けます
+（`RemotePad.exe --port 9000`）。
+
+URL に `?pin=123456` を付けて開くと PIN 入力を飛ばして接続します
+（アドレスバーには残りません）。
 
 ## 操作方法
 
