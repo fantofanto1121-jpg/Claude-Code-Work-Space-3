@@ -37,7 +37,7 @@ jobs:
         working-directory: remote-pc-control
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath dist\RemotePad.exe `
+          $agent = Start-Process -FilePath dist\RemotePad.exe `
                -ArgumentList '--host','127.0.0.1','--port','8791','--pin','424242' `
                -PassThru -WindowStyle Hidden
           Start-Sleep -Seconds 6
@@ -71,8 +71,8 @@ jobs:
               $seen = @{}
               for ($y = 0; $y -lt $bm.Height; $y += 7) {
                 for ($x = 0; $x -lt $bm.Width; $x += 7) {
-                  $p = $bm.GetPixel($x, $y)
-                  $seen["$($p.R),$($p.G),$($p.B)"] = $true
+                  $px = $bm.GetPixel($x, $y)
+                  $seen["$($px.R),$($px.G),$($px.B)"] = $true
                 }
               }
               Write-Host "distinct colours sampled: $($seen.Count)"
@@ -82,7 +82,7 @@ jobs:
             } finally { $bm.Dispose() }
             Write-Host "smoke test passed"
           } finally {
-            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id $agent.Id -Force -ErrorAction SilentlyContinue
           }
 
       - uses: actions/upload-artifact@v4
