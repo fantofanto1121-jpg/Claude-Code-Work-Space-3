@@ -344,8 +344,82 @@ body.compact .dock .row.clicks, body.compact .dock .scroll-strip { display: none
   .mbtn small { display: none; }
   .scroll-strip { height: 32px; font-size: 10px; }
   .stats { font-size: 10px; }
-  /* sideways on the screen tab, the dock costs more than it gives */
-  body.tab-screen .dock { display: none; }
+  .sheet { padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); gap: 7px; }
+  .kbd { gap: 4px; }
+  .kbd-row { gap: 4px; }
+  .kbd-row button { padding: 7px 2px; font-size: 13px; border-radius: 7px; }
+  .kbd-row button.util { font-size: 11px; }
+  .sheet-head h2 { font-size: 12px; }
+}
+
+/* on the screen tab the floating pad replaces the button dock entirely */
+body.tab-screen .dock { display: none; }
+
+.ov {
+  position: fixed; z-index: 22;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 7px;
+  pointer-events: none;
+}
+.ov.left {
+  right: auto; align-items: flex-start;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+}
+.ov > * { pointer-events: auto; }
+.ov-chip {
+  font: inherit; font-size: 11.5px; color: #eef1f6;
+  background: rgba(16, 19, 25, .55); border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 9px; padding: 7px 11px; cursor: pointer;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.ov-chip[aria-pressed="true"] { background: rgba(127, 158, 198, .75); color: #0c1016; }
+.ov-pad {
+  position: relative; overflow: hidden; touch-action: none;
+  width: calc(var(--ovw, 44) * 1vmin);
+  height: calc(var(--ovh, 38) * 1vmin);
+  border-radius: 14px; background: transparent;
+  /* a hairline that stays visible over light and dark captures alike */
+  border: 1px solid rgba(255, 255, 255, .6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .38);
+  transition: border-color .18s ease, background .18s ease;
+}
+.ov-pad.live { border-color: var(--accent); background: rgba(127, 158, 198, .1); }
+.ov-pad.locked { border-color: var(--warn); }
+.ov-pad .spot {
+  background: radial-gradient(circle, rgba(255, 255, 255, .22) 0%, transparent 70%);
+  border-color: rgba(255, 255, 255, .3);
+}
+.ov-tag {
+  position: absolute; inset: auto 0 7px; text-align: center;
+  font-size: 10px; letter-spacing: .06em; color: rgba(255, 255, 255, .55);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .6); pointer-events: none;
+  transition: opacity .2s ease;
+}
+.ov-pad.live .ov-tag { opacity: 0; }
+
+/* over a capture the keyboard floats, translucent, beside the pad */
+body.tab-screen #kb {
+  background: rgba(13, 16, 21, .6);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border-color: rgba(255, 255, 255, .14);
+}
+body.tab-screen #kb .kbd-row button {
+  background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .16);
+}
+body.tab-screen #kb .sheet-head h2 { color: #eef1f6; }
+body.tab-screen.kb-open .ov {
+  bottom: calc(var(--kb-h, 0px) + 12px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 640px) {
+  body.tab-screen.kb-open #kb {
+    right: calc(var(--ovw, 44) * 1vmin + 26px);
+    border-radius: 20px 20px 0 0;
+  }
+  body.tab-screen.kb-open.ov-left #kb {
+    right: 0; left: calc(var(--ovw, 44) * 1vmin + 26px);
+  }
+  body.tab-screen.kb-open .ov { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* immersive screen view: the capture fills the device, nothing else shows */
@@ -365,6 +439,8 @@ body.immersive .shot-wrap { display: flex; align-items: center; justify-content:
 
 .imm-bar {
   position: fixed; z-index: 25; display: flex; gap: 6px;
+  flex-wrap: wrap; justify-content: flex-end; align-items: center;
+  max-width: calc(100vw - 20px);
   top: calc(10px + env(safe-area-inset-top, 0px));
   right: calc(10px + env(safe-area-inset-right, 0px));
 }
@@ -375,6 +451,10 @@ body.immersive .shot-wrap { display: flex; align-items: center; justify-content:
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
 .imm-chip[aria-pressed="true"] { background: rgba(127, 158, 198, .8); color: #0c1016; border-color: transparent; }
+.imm-bar .stats {
+  color: rgba(255, 255, 255, .62); text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+  padding-right: 4px;
+}
 
 .toast {
   position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);

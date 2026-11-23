@@ -21,6 +21,10 @@
     shotWidth: 1024,  // capture width in pixels
     compact: false,   // hide the click row and scroll strip
     rotate: false,    // turn the capture 90 degrees to fill a portrait screen
+    ovW: 44,          // overlay pad width, in vmin
+    ovH: 38,          // overlay pad height, in vmin
+    ovLeft: false,    // put the overlay pad on the left
+    rotateSet: false, // true once the viewer has chosen a rotation themselves
     haptics: true
   };
   const S = Object.assign({}, DEFAULTS);
@@ -137,16 +141,12 @@
     views.pad.hidden = name !== 'pad';
     views.screen.hidden = name !== 'screen';
     document.body.classList.toggle('tab-screen', name === 'screen');
+    $('ov').hidden = name !== 'screen';
     $('tab-pad').setAttribute('aria-selected', String(name === 'pad'));
     $('tab-screen').setAttribute('aria-selected', String(name === 'screen'));
-    if (name === 'screen') { layoutShot(); if (!streaming) refreshShot(); else requestFrame(true); }
-    else {
-      if (streaming) setLive(false);
-      if (document.body.classList.contains('immersive')) setImmersive(false);
-    }
   }
-  $('tab-pad').onclick = () => showTab('pad');
-  $('tab-screen').onclick = () => showTab('screen');
+  $('tab-pad').onclick = () => { setImmersive(false); showTab('pad'); };
+  $('tab-screen').onclick = () => { showTab('screen'); setImmersive(true); };
 
   /* ------------------------------------------------------ motion queue */
   let qx = 0, qy = 0, queued = false;
@@ -162,72 +162,80 @@
   }
 
   /* ---------------------------------------------------------- trackpad */
-  const pts = new Map();
-  let startTime = 0, moved = 0, maxTouch = 0, pressTimer = null, scrollAcc = 0;
+  /* the same gestures drive the solid pad and the see-through overlay */
+  function attachPad(el, spotEl) {
+    const pts = new Map();
+    let startTime = 0, moved = 0, maxTouch = 0, pressTimer = null, scrollAcc = 0;
 
-  function padPoint(e) {
-    const r = pad.getBoundingClientRect();
-    pad.style.setProperty('--px', ((e.clientX - r.left) / r.width * 100) + '%');
-    pad.style.setProperty('--py', ((e.clientY - r.top) / r.height * 100) + '%');
-    spot.style.left = (e.clientX - r.left) + 'px';
-    spot.style.top = (e.clientY - r.top) + 'px';
-  }
+    const highlight = (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--px', ((e.clientX - r.left) / r.width * 100) + '%');
+      el.style.setProperty('--py', ((e.clientY - r.top) / r.height * 100) + '%');
+      if (spotEl) {
+        spotEl.style.left = (e.clientX - r.left) + 'px';
+        spotEl.style.top = (e.clientY - r.top) + 'px';
+      }
+    };
 
-  pad.addEventListener('pointerdown', (e) => {
-    pad.setPointerCapture(e.pointerId);
-    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    maxTouch = Math.max(maxTouch, pts.size);
-    if (pts.size === 1) {
-      startTime = performance.now(); moved = 0; maxTouch = 1;
-      pad.classList.add('live');
-      padPoint(e);
+    el.addEventListener('pointerdown', (e) => {
+      el.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      maxTouch = Math.max(maxTouch, pts.size);
+      if (pts.size === 1) {
+        startTime = performance.now(); moved = 0; maxTouch = 1;
+        el.classList.add('live');
+        highlight(e);
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          if (pts.size === 1 && moved < 10 && !dragLocked) setDragLock(true);
+        }, 520);
+      }
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      moved += Math.abs(dx) + Math.abs(dy);
+      if (pts.size >= 2) {
+        const step = 26 / S.scroll;
+        scrollAcc += S.invert ? -dy : dy;
+        const notches = Math.trunc(scrollAcc / step);
+        if (notches) { send({ t: 'scroll', dy: notches }); scrollAcc -= notches * step; }
+        return;
+      }
+      highlight(e);
+      const speed = Math.hypot(dx, dy);
+      const gain = (1.1 + Math.min(speed / 6, 2.4)) * S.gain;
+      pushMove(dx * gain, dy * gain);
+    });
+
+    const end = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
       clearTimeout(pressTimer);
-      pressTimer = setTimeout(() => {
-        if (pts.size === 1 && moved < 10 && !dragLocked) setDragLock(true);
-      }, 520);
-    }
-  });
-
-  pad.addEventListener('pointermove', (e) => {
-    const p = pts.get(e.pointerId);
-    if (!p) return;
-    const dx = e.clientX - p.x, dy = e.clientY - p.y;
-    p.x = e.clientX; p.y = e.clientY;
-    moved += Math.abs(dx) + Math.abs(dy);
-    if (pts.size >= 2) {
-      const step = 26 / S.scroll;
-      scrollAcc += S.invert ? -dy : dy;
-      const notches = Math.trunc(scrollAcc / step);
-      if (notches) { send({ t: 'scroll', dy: notches }); scrollAcc -= notches * step; }
-      return;
-    }
-    padPoint(e);
-    const speed = Math.hypot(dx, dy);
-    const gain = (1.1 + Math.min(speed / 6, 2.4)) * S.gain;
-    pushMove(dx * gain, dy * gain);
-  });
-
-  function padEnd(e) {
-    if (!pts.has(e.pointerId)) return;
-    pts.delete(e.pointerId);
-    clearTimeout(pressTimer);
-    if (pts.size > 0) return;
-    pad.classList.remove('live');
-    const quick = performance.now() - startTime < 260 && moved < 12;
-    if (dragLocked) { setDragLock(false); }
-    else if (quick && S.tapClick) {
-      const which = maxTouch >= 3 ? 'middle' : maxTouch === 2 ? 'right' : 'left';
-      send({ t: 'btn', b: which, s: 'click' });
-      buzz(8);
-    }
-    maxTouch = 0; scrollAcc = 0;
+      if (pts.size > 0) return;
+      el.classList.remove('live');
+      const quick = performance.now() - startTime < 260 && moved < 12;
+      if (dragLocked) setDragLock(false);
+      else if (quick && S.tapClick) {
+        const which = maxTouch >= 3 ? 'middle' : maxTouch === 2 ? 'right' : 'left';
+        send({ t: 'btn', b: which, s: 'click' });
+        buzz(8);
+      }
+      maxTouch = 0; scrollAcc = 0;
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
   }
-  pad.addEventListener('pointerup', padEnd);
-  pad.addEventListener('pointercancel', padEnd);
+
+  attachPad(pad, spot);
+  attachPad($('ov-pad'), $('ov-spot'));
 
   function setDragLock(on) {
     dragLocked = on;
-    pad.classList.toggle('locked', on);
+    document.querySelectorAll('.padsurface').forEach((el) => el.classList.toggle('locked', on));
     $('drag-lock').setAttribute('aria-pressed', String(on));
     send({ t: 'btn', b: 'left', s: on ? 'down' : 'up' });
     buzz(on ? 18 : 8);
@@ -320,13 +328,8 @@
     if (streaming) setTimeout(() => requestFrame(false), 40);
   }
 
-  function refreshShot() { requestFrame(true); }
-  $('shot-refresh').onclick = refreshShot;
-
   function setLive(on) {
     streaming = on;
-    $('auto-off').setAttribute('aria-pressed', String(!on));
-    $('auto-live').setAttribute('aria-pressed', String(on));
     statsEl.classList.toggle('live', on);
     $('imm-live').setAttribute('aria-pressed', String(on));
     if (on) {
@@ -336,8 +339,6 @@
       statsEl.textContent = '停止中';
     }
   }
-  $('auto-off').onclick = () => setLive(false);
-  $('auto-live').onclick = () => setLive(true);
 
   /* size the canvas so its box is exactly the image, rotated 90 degrees when
      asked, and keep the touch mapping in step with it */
@@ -558,6 +559,7 @@
       row.forEach((spec) => el.appendChild(makeKey(spec)));
       kbKeys.appendChild(el);
     });
+    if (!kb.hidden) document.documentElement.style.setProperty('--kb-h', kb.offsetHeight + 'px');
   }
 
   function setKbMode(useText, focus) {
@@ -571,8 +573,23 @@
   $('kb-mode-keys').onclick = () => setKbMode(false, false);
   $('kb-mode-text').onclick = () => setKbMode(true, true);
 
-  $('kb-open').onclick = () => { kb.hidden = false; if (!kbText.hidden) typebox.focus(); };
-  $('kb-close').onclick = () => { kb.hidden = true; typebox.blur(); };
+  function setKbOpen(on) {
+    kb.hidden = !on;
+    document.body.classList.toggle('kb-open', on);
+    $('ov-kb').setAttribute('aria-pressed', String(on));
+    if (on) {
+      // the overlay pad sits above the keyboard on narrow screens
+      requestAnimationFrame(() => {
+        document.documentElement.style.setProperty('--kb-h', kb.offsetHeight + 'px');
+      });
+      if (!kbText.hidden) typebox.focus();
+    } else {
+      typebox.blur();
+    }
+  }
+  $('kb-open').onclick = () => setKbOpen(true);
+  $('kb-close').onclick = () => setKbOpen(false);
+  $('ov-kb').onclick = () => setKbOpen(kb.hidden);
 
   renderKeyboard();
   let savedKbMode = null;
@@ -605,13 +622,21 @@
   const RANGES = {
     padSize: (v) => Math.round(v) + '%',
     gain: (v) => Number(v).toFixed(1) + '倍',
-    scroll: (v) => Number(v).toFixed(1) + '倍'
+    scroll: (v) => Number(v).toFixed(1) + '倍',
+    ovW: (v) => Math.round(v) + '%',
+    ovH: (v) => Math.round(v) + '%'
   };
-  const TOGGLES = { invert: 'invert', tapClick: 'tapClick', compact: 'compact', haptics: 'haptics' };
+  const TOGGLES = { invert: 'invert', tapClick: 'tapClick', compact: 'compact',
+                    ovLeft: 'ovLeft', haptics: 'haptics' };
 
   function applySettings() {
-    document.documentElement.style.setProperty('--pad-size', S.padSize + '%');
+    const root = document.documentElement.style;
+    root.setProperty('--pad-size', S.padSize + '%');
+    root.setProperty('--ovw', S.ovW);
+    root.setProperty('--ovh', S.ovH);
     document.body.classList.toggle('compact', S.compact);
+    document.body.classList.toggle('ov-left', S.ovLeft);
+    $('ov').classList.toggle('left', S.ovLeft);
 
     Object.keys(RANGES).forEach((k) => {
       $('set-' + k).value = S[k];
@@ -632,6 +657,8 @@
       S[k] = Number(e.target.value);
       $('out-' + k).textContent = RANGES[k](S[k]);
       if (k === 'padSize') document.documentElement.style.setProperty('--pad-size', S.padSize + '%');
+      if (k === 'ovW') document.documentElement.style.setProperty('--ovw', S.ovW);
+      if (k === 'ovH') document.documentElement.style.setProperty('--ovh', S.ovH);
       saveSettings();
     });
   });
@@ -651,7 +678,7 @@
     if (!views.screen.hidden) requestFrame(true);
   });
 
-  $('settings-open').onclick = () => { kb.hidden = true; settingsSheet.hidden = false; };
+  $('settings-open').onclick = () => { setKbOpen(false); settingsSheet.hidden = false; };
   $('settings-close').onclick = () => { settingsSheet.hidden = true; };
   $('settings-reset').onclick = () => {
     Object.assign(S, DEFAULTS);
@@ -694,47 +721,60 @@
   if (standalone && !canFullscreen) $('fs-toggle').hidden = true;
 
   async function setImmersive(on) {
+    if (on === document.body.classList.contains('immersive')) return;
     document.body.classList.toggle('immersive', on);
     immBar.hidden = !on;
     if (on) {
-      if (views.screen.hidden) showTab('screen');
       await enterFullscreen();
       try { await (screen.orientation && screen.orientation.lock('landscape')); } catch (e) {}
       if (!inFullscreen() && !standalone) homeScreenHint();
+      autoRotate();
       $('imm-rotate').setAttribute('aria-pressed', String(S.rotate));
       layoutShot();
-      requestFrame(true);
-      if (!S.rotate && window.innerHeight > window.innerWidth) {
-        toast('「回転」で縦画面いっぱいに表示できます');
-      }
+      setLive(true);
+      if (S.rotate && !S.rotateSet) toast('縦画面に合わせて映像を回しました（「回転」で戻せます）');
     } else {
+      setLive(false);
       try { screen.orientation && screen.orientation.unlock(); } catch (e) {}
       await leaveFullscreen();
       layoutShot();
-      requestFrame(true);
     }
   }
   const immersive = () => document.body.classList.contains('immersive');
 
-  $('shot-max').onclick = () => setImmersive(true);
-  $('imm-exit').onclick = () => setImmersive(false);
+  $('imm-exit').onclick = () => { setImmersive(false); showTab('pad'); };
+  // until the viewer picks for themselves, match the rotation to how the
+  // device is being held, so the capture always fills as much as it can
+  function autoRotate() {
+    if (S.rotateSet) return;
+    const want = window.innerHeight > window.innerWidth;
+    if (S.rotate !== want) {
+      S.rotate = want;
+      $('imm-rotate').setAttribute('aria-pressed', String(want));
+      layoutShot();
+    }
+  }
+
   $('imm-rotate').onclick = () => {
+    S.rotateSet = true;
     S.rotate = !S.rotate;
     saveSettings(); layoutShot(); buzz(8);
     $('imm-rotate').setAttribute('aria-pressed', String(S.rotate));
     toast(S.rotate ? '映像を 90 度回転しました' : '回転を戻しました');
   };
-  $('imm-kb').onclick = () => { kb.hidden = false; if (!kbText.hidden) typebox.focus(); };
+  $('imm-kb').onclick = () => setKbOpen(kb.hidden);
   $('imm-live').onclick = () => setLive(!streaming);
 
   document.addEventListener('fullscreenchange', () => {
     $('fs-toggle').setAttribute('aria-pressed', String(inFullscreen()));
     // leaving fullscreen with a system gesture should leave the immersive view too
-    if (!inFullscreen() && immersive()) setImmersive(false);
+    if (!inFullscreen() && immersive()) { setImmersive(false); showTab('pad'); }
   });
 
   // the canvas keeps its pixel size, but its box changes on rotate
   window.addEventListener('resize', () => {
+    if (!kb.hidden) document.documentElement.style.setProperty('--kb-h', kb.offsetHeight + 'px');
+    if (immersive()) autoRotate();
     layoutShot();
     if (immersive()) requestFrame(false);
   });

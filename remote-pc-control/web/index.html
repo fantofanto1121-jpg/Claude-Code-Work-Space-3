@@ -47,7 +47,7 @@
 
 <main>
   <section id="view-pad">
-    <div class="pad" id="pad">
+    <div class="pad padsurface" id="pad">
       <div class="spot" id="spot"></div>
       <div class="pad-hint">
         1 本指でカーソル移動 / タップでクリック<br>
@@ -63,15 +63,6 @@
       <canvas id="shot" hidden></canvas>
       <span class="ping-mark" id="ping-mark"></span>
     </div>
-    <div class="shot-bar">
-      <button class="btn" id="shot-max">最大化</button>
-      <div class="chiprow">
-        <button class="chip" id="shot-refresh">再取得</button>
-        <button class="chip" id="auto-off" aria-pressed="true">停止</button>
-        <button class="chip" id="auto-live" aria-pressed="false">ライブ</button>
-      </div>
-    </div>
-    <div class="stats" id="stats">停止中</div>
   </section>
 </main>
 
@@ -139,6 +130,22 @@
   </div>
 
   <div class="setting-group">
+    <h3>画面モードのパッド</h3>
+    <div class="setting">
+      <span>幅</span><output id="out-ovW"></output>
+      <input type="range" id="set-ovW" min="24" max="70" step="2">
+    </div>
+    <div class="setting">
+      <span>高さ</span><output id="out-ovH"></output>
+      <input type="range" id="set-ovH" min="18" max="60" step="2">
+    </div>
+    <div class="setting row-only">
+      <span>左側に置く</span>
+      <button class="toggle" id="set-ovLeft" aria-pressed="false">オフ</button>
+    </div>
+  </div>
+
+  <div class="setting-group">
     <h3>画面</h3>
     <div class="setting row-only">
       <span>解像度</span>
@@ -166,7 +173,16 @@
   <button class="btn" id="settings-reset">初期設定に戻す</button>
 </div>
 
+<div class="ov" id="ov" hidden>
+  <button class="ov-chip" id="ov-kb">キーボード</button>
+  <div class="ov-pad padsurface" id="ov-pad">
+    <div class="spot" id="ov-spot"></div>
+    <span class="ov-tag">トラックパッド</span>
+  </div>
+</div>
+
 <div class="imm-bar" id="imm-bar" hidden>
+  <span class="stats" id="stats"></span>
   <button class="imm-chip" id="imm-rotate">回転</button>
   <button class="imm-chip" id="imm-live">ライブ</button>
   <button class="imm-chip" id="imm-kb">キーボード</button>

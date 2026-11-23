@@ -354,15 +354,19 @@ def main() -> int:
     srv.pin, srv.backend = str(pin), backend
 
     vx, vy, vw, vh = backend.refresh_metrics()
-    url = "http://%s:%d/" % (lan_ip(), args.port)
-    bar = "-" * 52
+    base = "http://%s:%d/" % (lan_ip(), args.port)
+    url = "%s?pin=%s" % (base, pin)
+    bar = "-" * 58
     print(bar)
     print(" Remote Pad agent is running")
     print(bar)
-    print("  open on your phone :  %s" % url)
-    print("  PIN                :  %s" % pin)
-    print("  input backend      :  %s" % backend.name)
-    print("  virtual screen     :  %d x %d" % (vw, vh))
+    print("  Open this on your phone (the PIN is already in it):")
+    print()
+    print("      %s" % url)
+    print()
+    print("  without the PIN :  %s   (PIN: %s)" % (base, pin))
+    print("  input backend   :  %s" % backend.name)
+    print("  virtual screen  :  %d x %d" % (vw, vh))
     print(bar)
     print("  Keep this window open. Ctrl+C to stop.")
     print(bar, flush=True)
