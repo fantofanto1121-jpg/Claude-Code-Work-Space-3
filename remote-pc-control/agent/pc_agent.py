@@ -227,7 +227,8 @@ class Handler(socketserver.StreamRequestHandler):
         if path == "/api/info":
             vx, vy, vw, vh = self.server.backend.refresh_metrics()
             body = json.dumps({"host": socket.gethostname(), "backend": self.server.backend.name,
-                               "screen": {"w": vw, "h": vh}}).encode()
+                               "screen": {"w": vw, "h": vh},
+                               "bpp": getattr(self.server.backend, "bits_per_pixel", 0)}).encode()
             return self.reply("200 OK", body, "application/json")
 
         if path == "/api/shot":

@@ -45,6 +45,10 @@ jobs:
             $info = Invoke-RestMethod 'http://127.0.0.1:8791/api/info'
             Write-Host "info: $($info | ConvertTo-Json -Compress)"
             if ($info.backend -ne 'win32') { throw "expected the win32 backend, got $($info.backend)" }
+            if ($info.bpp -lt 24) {
+              throw "the capture bitmap is $($info.bpp) bit; a colour capture needs 24 or more"
+            }
+            Write-Host "capture depth: $($info.bpp) bit"
 
             $page = Invoke-WebRequest 'http://127.0.0.1:8791/' -UseBasicParsing
             if ($page.StatusCode -ne 200) { throw "the UI was not served" }
@@ -60,6 +64,22 @@ jobs:
             $sig = [System.IO.File]::ReadAllBytes("$PWD\shot.png")[0..3]
             if (($sig -join ',') -ne '137,80,78,71') { throw "the capture is not a PNG" }
             Write-Host "capture: $((Get-Item shot.png).Length) bytes of PNG"
+
+            Add-Type -AssemblyName System.Drawing
+            $bm = [System.Drawing.Bitmap]::FromFile("$PWD\shot.png")
+            try {
+              $seen = @{}
+              for ($y = 0; $y -lt $bm.Height; $y += 7) {
+                for ($x = 0; $x -lt $bm.Width; $x += 7) {
+                  $p = $bm.GetPixel($x, $y)
+                  $seen["$($p.R),$($p.G),$($p.B)"] = $true
+                }
+              }
+              Write-Host "distinct colours sampled: $($seen.Count)"
+              if ($seen.Count -le 2) {
+                throw "the capture holds $($seen.Count) colour(s); it is monochrome"
+              }
+            } finally { $bm.Dispose() }
             Write-Host "smoke test passed"
           } finally {
             Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue

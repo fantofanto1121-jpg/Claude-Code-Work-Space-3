@@ -61,6 +61,7 @@ class StubBackend:
 
     def __init__(self) -> None:
         self.virtual = (0, 0, 1920, 1080)
+        self.bits_per_pixel = 32
 
     def refresh_metrics(self):
         return self.virtual
@@ -146,6 +147,11 @@ else:
                     ("biYPelsPerMeter", wt.LONG), ("biClrUsed", wt.DWORD),
                     ("biClrImportant", wt.DWORD)]
 
+    class BITMAP(ctypes.Structure):
+        _fields_ = [("bmType", wt.LONG), ("bmWidth", wt.LONG), ("bmHeight", wt.LONG),
+                    ("bmWidthBytes", wt.LONG), ("bmPlanes", wt.WORD),
+                    ("bmBitsPixel", wt.WORD), ("bmBits", ctypes.c_void_p)]
+
     class BITMAPINFO(ctypes.Structure):
         _fields_ = [("bmiHeader", BITMAPINFOHEADER), ("bmiColors", wt.DWORD * 3)]
 
@@ -166,6 +172,7 @@ else:
                                  ctypes.c_int, ctypes.c_int, wt.DWORD)
     gdi32.GetDIBits.argtypes = (ctypes.c_void_p, ctypes.c_void_p, wt.UINT, wt.UINT,
                                 ctypes.c_void_p, ctypes.POINTER(BITMAPINFO), wt.UINT)
+    gdi32.GetObjectW.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p)
     gdi32.DeleteObject.argtypes = (ctypes.c_void_p,)
     gdi32.DeleteDC.argtypes = (ctypes.c_void_p,)
 
@@ -184,6 +191,20 @@ else:
         def __init__(self) -> None:
             _dpi_aware()
             self.refresh_metrics()
+            self.bits_per_pixel = self._probe_depth()
+
+        @staticmethod
+        def _probe_depth() -> int:
+            """Bits per pixel of a bitmap made the way capture makes it."""
+            screen = user32.GetDC(None)
+            bmp = gdi32.CreateCompatibleBitmap(screen, 2, 2)
+            try:
+                info = BITMAP()
+                gdi32.GetObjectW(bmp, ctypes.sizeof(BITMAP), ctypes.byref(info))
+                return int(info.bmBitsPixel)
+            finally:
+                gdi32.DeleteObject(bmp)
+                user32.ReleaseDC(None, screen)
 
         # -- geometry ---------------------------------------------------
         def refresh_metrics(self):
@@ -278,7 +299,11 @@ else:
 
             screen = user32.GetDC(None)
             mem = gdi32.CreateCompatibleDC(screen)
-            bmp = gdi32.CreateCompatibleBitmap(mem, out_w, out_h)
+            # Must be compatible with the screen DC. A freshly made memory DC
+            # still holds its default 1x1 monochrome bitmap, so asking it for a
+            # compatible bitmap yields a 1 bit one and the capture comes back
+            # dithered black and white.
+            bmp = gdi32.CreateCompatibleBitmap(screen, out_w, out_h)
             old = gdi32.SelectObject(mem, bmp)
             try:
                 gdi32.SetStretchBltMode(mem, HALFTONE)
