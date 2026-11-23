@@ -10,12 +10,37 @@
   const strip = $('strip'), kb = $('kb'), typebox = $('typebox'), toastEl = $('toast');
 
   let ws = null, pin = '', ready = false, wantOpen = false, retry = 0;
+  /* ------------------------------------------------------------ settings */
+  const SETTINGS_KEY = 'remotepad.settings';
+  const DEFAULTS = {
+    padSize: 100,     // trackpad height, percent of the available area
+    gain: 1,          // cursor speed multiplier
+    scroll: 1,        // scroll speed multiplier
+    invert: false,    // reverse the scroll direction
+    tapClick: true,   // a tap on the pad clicks
+    shotWidth: 1024,  // capture width in pixels
+    compact: false,   // hide the click row and scroll strip
+    haptics: true
+  };
+  const S = Object.assign({}, DEFAULTS);
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    Object.keys(DEFAULTS).forEach((k) => { if (k in saved) S[k] = saved[k]; });
+  } catch (e) { /* defaults are fine */ }
+
+  const saveSettings = () => {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch (e) {}
+  };
+
   let dragLocked = false;
   let streaming = false, awaiting = false, lastFrameAt = 0;
   let tileQueue = [], frameTimes = [], bytesAcc = 0, statsAt = 0;
 
   /* ------------------------------------------------------------- utils */
-  const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+  const buzz = (ms) => {
+    if (!S.haptics) return;
+    try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {}
+  };
   let toastTimer = null;
   function toast(text) {
     toastEl.textContent = text;
@@ -165,14 +190,15 @@
     p.x = e.clientX; p.y = e.clientY;
     moved += Math.abs(dx) + Math.abs(dy);
     if (pts.size >= 2) {
-      scrollAcc += dy;
-      const notches = Math.trunc(scrollAcc / 26);
-      if (notches) { send({ t: 'scroll', dy: notches }); scrollAcc -= notches * 26; }
+      const step = 26 / S.scroll;
+      scrollAcc += S.invert ? -dy : dy;
+      const notches = Math.trunc(scrollAcc / step);
+      if (notches) { send({ t: 'scroll', dy: notches }); scrollAcc -= notches * step; }
       return;
     }
     padPoint(e);
     const speed = Math.hypot(dx, dy);
-    const gain = 1.1 + Math.min(speed / 6, 2.4);
+    const gain = (1.1 + Math.min(speed / 6, 2.4)) * S.gain;
     pushMove(dx * gain, dy * gain);
   });
 
@@ -184,7 +210,7 @@
     pad.classList.remove('live');
     const quick = performance.now() - startTime < 260 && moved < 12;
     if (dragLocked) { setDragLock(false); }
-    else if (quick) {
+    else if (quick && S.tapClick) {
       const which = maxTouch >= 3 ? 'middle' : maxTouch === 2 ? 'right' : 'left';
       send({ t: 'btn', b: which, s: 'click' });
       buzz(8);
@@ -221,10 +247,11 @@
   });
   strip.addEventListener('pointermove', (e) => {
     if (stripY === null) return;
-    stripAcc += e.clientY - stripY;
+    const step = 18 / S.scroll;
+    stripAcc += (S.invert ? -1 : 1) * (e.clientY - stripY);
     stripY = e.clientY;
-    const notches = Math.trunc(stripAcc / 18);
-    if (notches) { send({ t: 'scroll', dy: notches }); stripAcc -= notches * 18; }
+    const notches = Math.trunc(stripAcc / step);
+    if (notches) { send({ t: 'scroll', dy: notches }); stripAcc -= notches * step; }
   });
   const stripEnd = () => { stripY = null; strip.classList.remove('live'); };
   strip.addEventListener('pointerup', stripEnd);
@@ -232,9 +259,7 @@
 
   /* ----------------------------------------------------------- screen */
   function shotWidth() {
-    const css = shotWrap.clientWidth * (window.devicePixelRatio || 1);
-    const cap = streaming ? 1024 : 1280;
-    return Math.max(480, Math.min(cap, Math.round(css)));
+    return Math.max(480, Math.min(1600, Math.round(S.shotWidth)));
   }
 
   function requestFrame(full) {
@@ -350,9 +375,10 @@
     const dy = e.clientY - p.y; p.y = e.clientY;
     shotMoved += Math.abs(dy) + 1;
     if (shotPts.size >= 2) {
-      shotScroll += dy;
-      const notches = Math.trunc(shotScroll / 24);
-      if (notches) { send({ t: 'scroll', dy: notches }); shotScroll -= notches * 24; }
+      const step = 24 / S.scroll;
+      shotScroll += S.invert ? -dy : dy;
+      const notches = Math.trunc(shotScroll / step);
+      if (notches) { send({ t: 'scroll', dy: notches }); shotScroll -= notches * step; }
       return;
     }
     const c = shotCoords(e);
@@ -550,6 +576,67 @@
       typebox.value = ''; lastVal = '';
     }
   });
+
+  /* --------------------------------------------------------- settings UI */
+  const settingsSheet = $('settings');
+  const RANGES = {
+    padSize: (v) => Math.round(v) + '%',
+    gain: (v) => Number(v).toFixed(1) + '倍',
+    scroll: (v) => Number(v).toFixed(1) + '倍'
+  };
+  const TOGGLES = { invert: 'invert', tapClick: 'tapClick', compact: 'compact', haptics: 'haptics' };
+
+  function applySettings() {
+    document.documentElement.style.setProperty('--pad-size', S.padSize + '%');
+    document.body.classList.toggle('compact', S.compact);
+
+    Object.keys(RANGES).forEach((k) => {
+      $('set-' + k).value = S[k];
+      $('out-' + k).textContent = RANGES[k](S[k]);
+    });
+    Object.keys(TOGGLES).forEach((k) => {
+      const el = $('set-' + k);
+      el.setAttribute('aria-pressed', String(!!S[k]));
+      el.textContent = S[k] ? 'オン' : 'オフ';
+    });
+    $('set-shotWidth').querySelectorAll('button').forEach((b) => {
+      b.setAttribute('aria-pressed', String(Number(b.dataset.w) === S.shotWidth));
+    });
+  }
+
+  Object.keys(RANGES).forEach((k) => {
+    $('set-' + k).addEventListener('input', (e) => {
+      S[k] = Number(e.target.value);
+      $('out-' + k).textContent = RANGES[k](S[k]);
+      if (k === 'padSize') document.documentElement.style.setProperty('--pad-size', S.padSize + '%');
+      saveSettings();
+    });
+  });
+
+  Object.keys(TOGGLES).forEach((k) => {
+    $('set-' + k).addEventListener('click', () => {
+      S[k] = !S[k];
+      saveSettings(); applySettings(); buzz(8);
+    });
+  });
+
+  $('set-shotWidth').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-w]');
+    if (!b) return;
+    S.shotWidth = Number(b.dataset.w);
+    saveSettings(); applySettings(); buzz(8);
+    if (!views.screen.hidden) requestFrame(true);
+  });
+
+  $('settings-open').onclick = () => { kb.hidden = true; settingsSheet.hidden = false; };
+  $('settings-close').onclick = () => { settingsSheet.hidden = true; };
+  $('settings-reset').onclick = () => {
+    Object.assign(S, DEFAULTS);
+    saveSettings(); applySettings(); toast('初期設定に戻しました');
+  };
+  $('kb-open').addEventListener('click', () => { settingsSheet.hidden = true; });
+
+  applySettings();
 
   document.addEventListener('gesturestart', (e) => e.preventDefault());
   showTab('pad');

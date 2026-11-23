@@ -35,6 +35,7 @@
   <span class="dot" id="dot"></span>
   <span class="host" id="host">—</span>
   <span class="lat" id="lat"></span>
+  <button class="chip" id="settings-open">設定</button>
   <button class="chip" id="disconnect" title="切断">切断</button>
 </header>
 
@@ -73,7 +74,7 @@
 </main>
 
 <footer class="dock">
-  <div class="row">
+  <div class="row clicks">
     <button class="mbtn" data-btn="left">左クリック<small>タップでも可</small></button>
     <button class="mbtn" data-btn="middle">中<small>ホイール</small></button>
     <button class="mbtn" data-btn="right">右クリック<small>メニュー</small></button>
@@ -103,6 +104,64 @@
     <div class="keys" id="keys"></div>
     <p class="kb-hint">日本語を打つときはこちら。端末のキーボードが開きます。</p>
   </div>
+</div>
+
+<div class="sheet" id="settings" hidden>
+  <div class="sheet-head">
+    <h2>設定</h2>
+    <button class="chip" id="settings-close">閉じる</button>
+  </div>
+
+  <div class="setting-group">
+    <h3>トラックパッド</h3>
+    <div class="setting">
+      <span>高さ</span><output id="out-padSize"></output>
+      <input type="range" id="set-padSize" min="40" max="100" step="5">
+    </div>
+    <div class="setting">
+      <span>カーソル感度</span><output id="out-gain"></output>
+      <input type="range" id="set-gain" min="0.4" max="2.5" step="0.1">
+    </div>
+    <div class="setting">
+      <span>スクロール感度</span><output id="out-scroll"></output>
+      <input type="range" id="set-scroll" min="0.4" max="2.5" step="0.1">
+    </div>
+    <div class="setting row-only">
+      <span>スクロール方向を反転</span>
+      <button class="toggle" id="set-invert" aria-pressed="false">オフ</button>
+    </div>
+    <div class="setting row-only">
+      <span>タップでクリック</span>
+      <button class="toggle" id="set-tapClick" aria-pressed="true">オン</button>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <h3>画面</h3>
+    <div class="setting row-only">
+      <span>解像度</span>
+      <div class="seg-mini" id="set-shotWidth">
+        <button class="chip" data-w="720">720</button>
+        <button class="chip" data-w="1024">1024</button>
+        <button class="chip" data-w="1280">1280</button>
+        <button class="chip" data-w="1600">1600</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <h3>その他</h3>
+    <div class="setting row-only">
+      <span>ボタン列を隠す</span>
+      <button class="toggle" id="set-compact" aria-pressed="false">オフ</button>
+    </div>
+    <div class="setting row-only">
+      <span>振動</span>
+      <button class="toggle" id="set-haptics" aria-pressed="true">オン</button>
+    </div>
+  </div>
+
+  <button class="btn" id="settings-reset">初期設定に戻す</button>
 </div>
 
 <div class="toast" id="toast"></div>
