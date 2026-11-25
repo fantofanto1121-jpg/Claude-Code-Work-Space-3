@@ -110,6 +110,8 @@ class WebSocket:
             if opcode == 0x1:
                 return data.decode("utf-8", "replace")
             if opcode == 0x8:
+                # RFC 6455 wants the close echoed back before the socket goes
+                self._frame(0x8, data[:125])
                 self.open = False
                 return None
             if opcode == 0x9:
@@ -193,12 +195,17 @@ class Handler(socketserver.StreamRequestHandler):
                 return
             method, target = parts[0], parts[1]
             headers = {}
-            for _ in range(60):
+            done = False
+            for _ in range(120):
                 line = self.rfile.readline(8192)
                 if line in (b"\r\n", b"\n", b""):
+                    done = True
                     break
                 k, _, v = line.decode("latin-1").partition(":")
                 headers[k.strip().lower()] = v.strip()
+            if not done:
+                # the headers never ended, so anything after them is unusable
+                return
 
             path, _, query = target.partition("?")
             params = urllib.parse.parse_qs(query)
