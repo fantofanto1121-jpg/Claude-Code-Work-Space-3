@@ -83,6 +83,57 @@ jobs:
                 throw "the capture holds $($seen.Count) colour(s); it is monochrome"
               }
             } finally { $bm.Dispose() }
+            # HTTP alone proves nothing: the live control runs over a websocket
+            $ct = [Threading.CancellationToken]::None
+            $ws = New-Object System.Net.WebSockets.ClientWebSocket
+            if (-not $ws.ConnectAsync([Uri]"ws://127.0.0.1:8791/ws", $ct).Wait(8000)) {
+              throw "the websocket handshake timed out"
+            }
+            if ($ws.State -ne [System.Net.WebSockets.WebSocketState]::Open) {
+              throw "the websocket did not open (state $($ws.State))"
+            }
+            Write-Host "websocket: open"
+
+            function Send-Json($sock, $token, $text) {
+              $b = [Text.Encoding]::UTF8.GetBytes($text)
+              $null = $sock.SendAsync([ArraySegment[byte]]::new($b),
+                        [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $token).Wait(5000)
+            }
+            function Recv-Msg($sock, $token) {
+              $buf = [byte[]]::new(131072)
+              $t = $sock.ReceiveAsync([ArraySegment[byte]]::new($buf), $token)
+              if (-not $t.Wait(10000)) { throw "the agent never answered" }
+              $res = $t.Result
+              if ($res.MessageType -eq [System.Net.WebSockets.WebSocketMessageType]::Binary) {
+                return @{ kind = 'bin'; len = $res.Count }
+              }
+              return @{ kind = 'text'; text = [Text.Encoding]::UTF8.GetString($buf, 0, $res.Count) }
+            }
+
+            Send-Json $ws $ct '{"t":"auth","pin":"424242"}'
+            $m = Recv-Msg $ws $ct
+            if ($m.text -notmatch '"t":"ready"') { throw "auth was refused: $($m.text)" }
+            Write-Host "websocket auth: $($m.text)"
+
+            Send-Json $ws $ct '{"t":"rel","dx":4,"dy":-3}'
+            Send-Json $ws $ct '{"t":"btn","b":"left","s":"click"}'
+            Send-Json $ws $ct '{"t":"text","s":"ok"}'
+            Send-Json $ws $ct '{"t":"ping","id":7}'
+            $m = Recv-Msg $ws $ct
+            if ($m.text -notmatch '"t":"pong"') { throw "no pong came back: $($m.text)" }
+            Write-Host "websocket ping: $($m.text)"
+
+            Send-Json $ws $ct '{"t":"frame","w":640,"full":true}'
+            $chunks = 0; $bytes = 0
+            while ($true) {
+              $m = Recv-Msg $ws $ct
+              if ($m.kind -eq 'bin') { $chunks++; $bytes += $m.len; continue }
+              if ($m.text -match '"t":"frame_end"') { Write-Host "frame_end: $($m.text)"; break }
+            }
+            if ($chunks -lt 1) { throw "the agent streamed no image tiles" }
+            Write-Host "websocket stream: $chunks chunks, $bytes bytes"
+            $null = $ws.CloseAsync([System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure, "done", $ct).Wait(3000)
+
             Write-Host "smoke test passed"
           } finally {
             Stop-Process -Id $agent.Id -Force -ErrorAction SilentlyContinue

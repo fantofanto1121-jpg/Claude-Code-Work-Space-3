@@ -9,7 +9,7 @@
   const statsEl = $('stats'), ctx2d = shot.getContext('2d', { alpha: false });
   const strip = $('strip'), kb = $('kb'), typebox = $('typebox'), toastEl = $('toast');
 
-  let ws = null, pin = '', ready = false, wantOpen = false, retry = 0;
+  let ws = null, pin = '', ready = false, wantOpen = false, retry = 0, denied = false;
   /* ------------------------------------------------------------ settings */
   const SETTINGS_KEY = 'remotepad.settings';
   const DEFAULTS = {
@@ -61,11 +61,33 @@
     if (label) hostEl.textContent = label;
   }
 
+  /* says which half of the connection is failing instead of hanging silently */
+  async function diagnose(wsUrl) {
+    gate.hidden = false;
+    gateMsg.classList.add('err');
+    gateMsg.textContent = '接続を確認しています…';
+    if (location.protocol === 'https:') {
+      gateMsg.textContent = 'https のページからは暗号化なしの LAN に繋げません。' +
+                            'PC が表示している http:// の URL を直接開いてください。';
+      return;
+    }
+    try {
+      const r = await fetch('api/info', { cache: 'no-store' });
+      const info = await r.json();
+      gateMsg.textContent = 'ページは ' + info.host + ' から届いていますが、WebSocket (' +
+                            wsUrl + ') が張れません。PC のウィンドウに connect と出るか確認してください。';
+    } catch (e) {
+      gateMsg.textContent = 'エージェントに届いていません。PC で起動しているか、' +
+                            '同じ Wi-Fi か、アドレスが合っているか確認してください。';
+    }
+  }
+
   function connect(enteredPin) {
     pin = enteredPin;
-    wantOpen = true;
+    wantOpen = true; denied = false;
     setState('wait', '接続中…');
-    ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+    const wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+    ws = new WebSocket(wsUrl);
     ws.binaryType = 'arraybuffer';
     ws.onopen = () => send({ t: 'auth', pin });
     ws.onmessage = (ev) => {
@@ -79,7 +101,7 @@
         setState('on', m.host || 'PC');
         if (m.backend === 'stub') toast('シミュレーションモード（Windows 以外）');
       } else if (m.t === 'denied') {
-        ready = false; wantOpen = false;
+        ready = false; wantOpen = false; denied = true;
         gate.hidden = false;
         gateMsg.textContent = 'PIN が違います';
         gateMsg.classList.add('err');
@@ -97,9 +119,11 @@
         retry = Math.min(retry + 1, 6);
         setState('wait', '再接続中…');
         setTimeout(() => wantOpen && connect(pin), 400 * retry);
+      } else if (wantOpen && !denied) {
+        diagnose(wsUrl);
       }
     };
-    ws.onerror = () => { if (!ready) { gateMsg.textContent = '接続できません'; gateMsg.classList.add('err'); } };
+    ws.onerror = () => { if (!ready) setState('', '—'); };
   }
 
   setInterval(() => {
