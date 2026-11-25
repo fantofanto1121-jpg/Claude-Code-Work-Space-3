@@ -52,6 +52,11 @@ jobs:
               throw "the capture bitmap is $($info.bpp) bit; a colour capture needs 24 or more"
             }
             Write-Host "capture depth: $($info.bpp) bit"
+            if ($info.monitors.Count -lt 1) { throw "no monitors were reported" }
+            foreach ($m in $info.monitors) {
+              Write-Host "monitor: $($m.w)x$($m.h) at $($m.x),$($m.y) primary=$($m.primary)"
+            }
+            if ($info.default_monitor -lt 0) { throw "no primary monitor was picked" }
 
             $page = Invoke-WebRequest 'http://127.0.0.1:8791/' -UseBasicParsing
             if ($page.StatusCode -ne 200) { throw "the UI was not served" }
@@ -123,6 +128,12 @@ jobs:
             if ($m.text -notmatch '"t":"pong"') { throw "no pong came back: $($m.text)" }
             Write-Host "websocket ping: $($m.text)"
 
+            # a frame scoped to one monitor must come back with that monitor's shape
+            $primary = $info.monitors[$info.default_monitor]
+            Send-Json $ws $ct ('{"t":"monitor","i":' + $info.default_monitor + '}')
+            $m = Recv-Msg $ws $ct
+            if ($m.text -notmatch '"t":"monitor"') { throw "the monitor was not switched: $($m.text)" }
+
             Send-Json $ws $ct '{"t":"frame","w":640,"full":true}'
             $chunks = 0; $bytes = 0
             while ($true) {
@@ -132,6 +143,14 @@ jobs:
             }
             if ($chunks -lt 1) { throw "the agent streamed no image tiles" }
             Write-Host "websocket stream: $chunks chunks, $bytes bytes"
+
+            $frame = $m.text | ConvertFrom-Json
+            $want = [math]::Round($primary.w / $primary.h, 2)
+            $got = [math]::Round($frame.w / $frame.h, 2)
+            if ([math]::Abs($want - $got) -gt 0.02) {
+              throw "the frame is $got wide for a monitor that is $want"
+            }
+            Write-Host "frame matches monitor $($info.default_monitor): ratio $got"
             $null = $ws.CloseAsync([System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure, "done", $ct).Wait(3000)
 
             Write-Host "smoke test passed"

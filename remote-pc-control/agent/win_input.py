@@ -60,22 +60,29 @@ class StubBackend:
     name = "stub"
 
     def __init__(self) -> None:
-        self.virtual = (0, 0, 1920, 1080)
+        self.virtual = (0, 0, 3200, 1080)
         self.bits_per_pixel = 32
 
     def refresh_metrics(self):
         return self.virtual
 
+    def monitors(self):
+        return [
+            {"x": 0, "y": 0, "w": 1920, "h": 1080, "primary": True, "name": "DISPLAY1"},
+            {"x": 1920, "y": 0, "w": 1280, "h": 1024, "primary": False, "name": "DISPLAY2"},
+        ]
+
     def move_relative(self, dx, dy): pass
-    def move_absolute(self, nx, ny): pass
+    def move_absolute(self, nx, ny, region=None): pass
     def button(self, which, state): pass
     def scroll(self, dx, dy): pass
     def key(self, name, mods=()): pass
     def type_text(self, text): pass
 
-    def grab(self, max_width=1024):
-        w = max(2, min(max_width, 1280))
-        h = max(2, round(w * self.virtual[3] / self.virtual[2]))
+    def grab(self, max_width=1024, region=None):
+        rx, ry, rw, rh = region or self.virtual
+        w = max(2, min(max_width, 1600))
+        h = max(2, round(w * rh / rw))
         row = bytearray()
         for x in range(w):
             f = x / w
@@ -90,10 +97,16 @@ class StubBackend:
         for i in range(bh):
             off = ((by + i) * w + bx) * 3
             frame[off:off + bw * 3] = stripe
+        # a pointer, so the client side can be checked without Windows
+        cx, cy = int(w * 0.5), int(h * 0.5)
+        for i in range(min(18, h - cy)):
+            run = max(1, (18 - i) // 2)
+            off = ((cy + i) * w + cx) * 3
+            frame[off:off + run * 3] = bytes((255, 255, 255)) * run
         return w, h, bytes(frame)
 
-    def capture(self, max_width=1024):
-        w, h, rgb = self.grab(max_width)
+    def capture(self, max_width=1024, region=None):
+        w, h, rgb = self.grab(max_width, region)
         return png_encode(w, h, rgb), w, h
 
 
@@ -147,6 +160,23 @@ else:
                     ("biYPelsPerMeter", wt.LONG), ("biClrUsed", wt.DWORD),
                     ("biClrImportant", wt.DWORD)]
 
+    class CURSORINFO(ctypes.Structure):
+        _fields_ = [("cbSize", wt.DWORD), ("flags", wt.DWORD),
+                    ("hCursor", ctypes.c_void_p), ("ptScreenPos", wt.POINT)]
+
+    class ICONINFO(ctypes.Structure):
+        _fields_ = [("fIcon", wt.BOOL), ("xHotspot", wt.DWORD), ("yHotspot", wt.DWORD),
+                    ("hbmMask", ctypes.c_void_p), ("hbmColor", ctypes.c_void_p)]
+
+    class MONITORINFOEXW(ctypes.Structure):
+        _fields_ = [("cbSize", wt.DWORD), ("rcMonitor", wt.RECT), ("rcWork", wt.RECT),
+                    ("dwFlags", wt.DWORD), ("szDevice", wt.WCHAR * 32)]
+
+    MONITORENUMPROC = ctypes.WINFUNCTYPE(wt.BOOL, ctypes.c_void_p, ctypes.c_void_p,
+                                         ctypes.POINTER(wt.RECT), wt.LPARAM)
+    CURSOR_SHOWING, DI_NORMAL, MONITORINFOF_PRIMARY = 0x0001, 0x0003, 0x0001
+    SM_CXCURSOR, SM_CYCURSOR = 13, 14
+
     class BITMAP(ctypes.Structure):
         _fields_ = [("bmType", wt.LONG), ("bmWidth", wt.LONG), ("bmHeight", wt.LONG),
                     ("bmWidthBytes", wt.LONG), ("bmPlanes", wt.WORD),
@@ -173,6 +203,13 @@ else:
     gdi32.GetDIBits.argtypes = (ctypes.c_void_p, ctypes.c_void_p, wt.UINT, wt.UINT,
                                 ctypes.c_void_p, ctypes.POINTER(BITMAPINFO), wt.UINT)
     gdi32.GetObjectW.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p)
+    user32.GetCursorInfo.argtypes = (ctypes.POINTER(CURSORINFO),)
+    user32.GetIconInfo.argtypes = (ctypes.c_void_p, ctypes.POINTER(ICONINFO))
+    user32.DrawIconEx.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_void_p,
+                                  ctypes.c_int, ctypes.c_int, wt.UINT, ctypes.c_void_p, wt.UINT)
+    user32.EnumDisplayMonitors.argtypes = (ctypes.c_void_p, ctypes.c_void_p,
+                                           MONITORENUMPROC, wt.LPARAM)
+    user32.GetMonitorInfoW.argtypes = (ctypes.c_void_p, ctypes.POINTER(MONITORINFOEXW))
     gdi32.DeleteObject.argtypes = (ctypes.c_void_p,)
     gdi32.DeleteDC.argtypes = (ctypes.c_void_p,)
 
@@ -207,6 +244,27 @@ else:
                 user32.ReleaseDC(None, screen)
 
         # -- geometry ---------------------------------------------------
+        def monitors(self):
+            found = []
+
+            def collect(hmon, hdc, lprc, lparam):
+                mi = MONITORINFOEXW()
+                mi.cbSize = ctypes.sizeof(MONITORINFOEXW)
+                if user32.GetMonitorInfoW(hmon, ctypes.byref(mi)):
+                    r = mi.rcMonitor
+                    found.append({"x": r.left, "y": r.top,
+                                  "w": r.right - r.left, "h": r.bottom - r.top,
+                                  "primary": bool(mi.dwFlags & MONITORINFOF_PRIMARY),
+                                  "name": mi.szDevice.replace("\\\\.\\", "")})
+                return True
+
+            user32.EnumDisplayMonitors(None, None, MONITORENUMPROC(collect), 0)
+            found.sort(key=lambda m: (m["x"], m["y"]))
+            if not found:
+                vx, vy, vw, vh = self.virtual
+                found = [{"x": vx, "y": vy, "w": vw, "h": vh, "primary": True, "name": "screen"}]
+            return found
+
         def refresh_metrics(self):
             g = user32.GetSystemMetrics
             self.virtual = (g(SM["x"]), g(SM["y"]), max(1, g(SM["cx"])), max(1, g(SM["cy"])))
@@ -236,13 +294,14 @@ else:
             if dx or dy:
                 self._send(self._mouse(MOVE, dx, dy))
 
-        def move_absolute(self, nx, ny):
+        def move_absolute(self, nx, ny, region=None):
             vx, vy, vw, vh = self.virtual
+            rx, ry, rw, rh = region or self.virtual
             nx = min(max(nx, 0.0), 1.0)
             ny = min(max(ny, 0.0), 1.0)
             # SendInput's virtual-desktop space is normalised over the whole
             # virtual screen, so convert through absolute pixels first.
-            px, py = vx + nx * (vw - 1), vy + ny * (vh - 1)
+            px, py = rx + nx * (rw - 1), ry + ny * (rh - 1)
             ax = (px - vx) * 65535.0 / max(1, vw - 1)
             ay = (py - vy) * 65535.0 / max(1, vh - 1)
             self._send(self._mouse(MOVE | ABSOLUTE | VIRTUALDESK, round(ax), round(ay)))
@@ -290,12 +349,14 @@ else:
                 self._send(*seq)
 
         # -- capture ----------------------------------------------------
-        def grab(self, max_width=1024):
+        def grab(self, max_width=1024, region=None):
             vx, vy, vw, vh = self.refresh_metrics()
-            out_w = min(max_width, vw)
+            rx, ry, rw, rh = region or (vx, vy, vw, vh)
+            rw, rh = max(2, rw), max(2, rh)
+            out_w = min(max_width, rw)
             out_w -= out_w % 2
             out_w = max(2, out_w)
-            out_h = max(2, round(out_w * vh / vw))
+            out_h = max(2, round(out_w * rh / rw))
 
             screen = user32.GetDC(None)
             mem = gdi32.CreateCompatibleDC(screen)
@@ -307,7 +368,8 @@ else:
             old = gdi32.SelectObject(mem, bmp)
             try:
                 gdi32.SetStretchBltMode(mem, HALFTONE)
-                gdi32.StretchBlt(mem, 0, 0, out_w, out_h, screen, vx, vy, vw, vh, SRCCOPY)
+                gdi32.StretchBlt(mem, 0, 0, out_w, out_h, screen, rx, ry, rw, rh, SRCCOPY)
+                self._draw_cursor(mem, rx, ry, rw, rh, out_w, out_h)
 
                 bmi = BITMAPINFO()
                 bmi.bmiHeader.biSize = ctypes.sizeof(BITMAPINFOHEADER)
@@ -331,9 +393,36 @@ else:
             rgb[2::3] = bgra[0::4]
             return out_w, out_h, bytes(rgb)
 
-        def capture(self, max_width=1024):
-            w, h, rgb = self.grab(max_width)
+        def capture(self, max_width=1024, region=None):
+            w, h, rgb = self.grab(max_width, region)
             return png_encode(w, h, rgb), w, h
+
+        @staticmethod
+        def _draw_cursor(mem, rx, ry, rw, rh, out_w, out_h):
+            """BitBlt leaves the pointer out, so paint it on afterwards."""
+            ci = CURSORINFO()
+            ci.cbSize = ctypes.sizeof(CURSORINFO)
+            if not user32.GetCursorInfo(ctypes.byref(ci)):
+                return
+            if not (ci.flags & CURSOR_SHOWING) or not ci.hCursor:
+                return
+            info = ICONINFO()
+            if not user32.GetIconInfo(ci.hCursor, ctypes.byref(info)):
+                return
+            try:
+                sx, sy = out_w / float(rw), out_h / float(rh)
+                cw = max(6, int(round(user32.GetSystemMetrics(SM_CXCURSOR) * sx)))
+                ch = max(6, int(round(user32.GetSystemMetrics(SM_CYCURSOR) * sy)))
+                px = int(round((ci.ptScreenPos.x - rx - info.xHotspot) * sx))
+                py = int(round((ci.ptScreenPos.y - ry - info.yHotspot) * sy))
+                if -cw < px < out_w and -ch < py < out_h:
+                    user32.DrawIconEx(mem, px, py, ci.hCursor, cw, ch, 0, None, DI_NORMAL)
+            finally:
+                # GetIconInfo hands over two bitmaps that are ours to free
+                if info.hbmMask:
+                    gdi32.DeleteObject(info.hbmMask)
+                if info.hbmColor:
+                    gdi32.DeleteObject(info.hbmColor)
 
     def make_backend():
         return Win32Backend()

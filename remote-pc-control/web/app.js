@@ -18,7 +18,8 @@
     scroll: 1,        // scroll speed multiplier
     invert: false,    // reverse the scroll direction
     tapClick: true,   // a tap on the pad clicks
-    shotWidth: 1024,  // capture width in pixels
+    shotWidth: 0,     // capture width in pixels, 0 picks it from the device
+    monitor: -2,      // -2 follows the agent, -1 is every monitor, else an index
     compact: false,   // hide the click row and scroll strip
     rotate: false,    // turn the capture 90 degrees to fill a portrait screen
     ovW: 44,          // overlay pad width, in vmin
@@ -39,6 +40,7 @@
 
   let dragLocked = false;
   let streaming = false, awaiting = false, lastFrameAt = 0;
+  let monitors = [], monIndex = -1;
   let tileQueue = [], frameTimes = [], bytesAcc = 0, statsAt = 0;
 
   /* ------------------------------------------------------------- utils */
@@ -94,8 +96,22 @@
       if (typeof ev.data !== 'string') { tileQueue.push(ev.data); return; }
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.t === 'frame_end') { drawFrame(m); return; }
+      if (m.t === 'monitor') {
+        monIndex = m.i;
+        if (m.monitors) monitors = m.monitors;
+        renderMonitors();
+        requestFrame(true);
+        return;
+      }
       if (m.t === 'ready') {
         ready = true; retry = 0;
+        monitors = m.monitors || [];
+        monIndex = typeof m.monitor === 'number' ? m.monitor : -1;
+        const wanted = S.monitor;
+        if (wanted >= -1 && wanted < monitors.length && wanted !== monIndex) {
+          send({ t: 'monitor', i: wanted });
+        }
+        renderMonitors();
         localStorage.setItem('remotepad.pin', pin);
         gate.hidden = true;
         setState('on', m.host || 'PC');
@@ -296,7 +312,10 @@
 
   /* ----------------------------------------------------------- screen */
   function shotWidth() {
-    return Math.max(480, Math.min(1600, Math.round(S.shotWidth)));
+    if (S.shotWidth > 0) return Math.max(480, Math.min(2560, Math.round(S.shotWidth)));
+    // match the device's real pixels, so nothing is upscaled on a retina screen
+    const px = Math.max(window.innerWidth, window.innerHeight) * (window.devicePixelRatio || 1);
+    return Math.max(640, Math.min(1920, Math.round(px)));
   }
 
   function requestFrame(full) {
@@ -641,6 +660,48 @@
     }
   });
 
+  /* --------------------------------------------------------- monitors */
+  const monLabel = (i) => (i < 0 ? '全体' : '画面' + (i + 1));
+
+  function chooseMonitor(i) {
+    S.monitor = i; saveSettings();
+    monIndex = i;
+    renderMonitors();
+    send({ t: 'monitor', i: i });
+    buzz(8);
+  }
+
+  function renderMonitors() {
+    const many = monitors.length > 1;
+    $('monitor-row').hidden = !many;
+    $('imm-mon').hidden = !many;
+    $('imm-mon').textContent = monLabel(monIndex);
+
+    const box = $('set-monitor');
+    const want = monitors.map((m, i) => i).concat(many ? [-1] : []);
+    if (box.dataset.built !== want.join(',')) {
+      box.textContent = '';
+      want.forEach((i) => {
+        const b = document.createElement('button');
+        b.className = 'chip';
+        b.textContent = monLabel(i) + (i >= 0 ? ' · ' + monitors[i].w + '×' + monitors[i].h : '');
+        b.onclick = () => chooseMonitor(i);
+        box.appendChild(b);
+      });
+      box.dataset.built = want.join(',');
+    }
+    Array.from(box.children).forEach((b, n) => {
+      b.setAttribute('aria-pressed', String(want[n] === monIndex));
+    });
+  }
+
+  $('imm-mon').onclick = () => {
+    if (monitors.length < 2) return;
+    const order = monitors.map((m, i) => i).concat([-1]);
+    const at = order.indexOf(monIndex);
+    chooseMonitor(order[(at + 1) % order.length]);
+  };
+
   /* --------------------------------------------------------- settings UI */
   const settingsSheet = $('settings');
   const RANGES = {
@@ -674,6 +735,7 @@
     $('set-shotWidth').querySelectorAll('button').forEach((b) => {
       b.setAttribute('aria-pressed', String(Number(b.dataset.w) === S.shotWidth));
     });
+    renderMonitors();
   }
 
   Object.keys(RANGES).forEach((k) => {

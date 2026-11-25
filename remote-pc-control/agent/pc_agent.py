@@ -46,6 +46,21 @@ CAPTURE_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 
 
+def pick_region(monitors, index):
+    """A monitor rect by index, or the whole desktop when index is -1."""
+    if index is not None and 0 <= index < len(monitors):
+        m = monitors[index]
+        return (m["x"], m["y"], m["w"], m["h"])
+    return None
+
+
+def default_monitor(monitors):
+    for i, m in enumerate(monitors):
+        if m.get("primary"):
+            return i
+    return 0 if monitors else -1
+
+
 def log(msg: str) -> None:
     with LOG_LOCK:
         print("[%s] %s" % (time.strftime("%H:%M:%S"), msg), flush=True)
@@ -233,8 +248,10 @@ class Handler(socketserver.StreamRequestHandler):
 
         if path == "/api/info":
             vx, vy, vw, vh = self.server.backend.refresh_metrics()
+            mons = self.server.backend.monitors()
             body = json.dumps({"host": socket.gethostname(), "backend": self.server.backend.name,
                                "screen": {"w": vw, "h": vh},
+                               "monitors": mons, "default_monitor": default_monitor(mons),
                                "bpp": getattr(self.server.backend, "bits_per_pixel", 0)}).encode()
             return self.reply("200 OK", body, "application/json")
 
@@ -243,11 +260,16 @@ class Handler(socketserver.StreamRequestHandler):
                 time.sleep(0.4)
                 return self.reply("403 Forbidden", b"bad pin", "text/plain")
             try:
-                width = max(240, min(1920, int((params.get("w") or ["1100"])[0])))
+                width = max(240, min(2560, int((params.get("w") or ["1100"])[0])))
             except ValueError:
                 width = 1100
+            mons = self.server.backend.monitors()
+            try:
+                idx = int((params.get("mon") or [default_monitor(mons)])[0])
+            except (TypeError, ValueError):
+                idx = default_monitor(mons)
             with CAPTURE_LOCK:
-                png, _, _ = self.server.backend.capture(width)
+                png, _, _ = self.server.backend.capture(width, pick_region(mons, idx))
             return self.reply("200 OK", png, "image/png")
 
         name = "index.html" if path == "/" else path.lstrip("/")
@@ -273,6 +295,9 @@ class Handler(socketserver.StreamRequestHandler):
         authed = False
         held = set()
         shot_hashes = {}
+        mons = backend.monitors()
+        mon_index = default_monitor(mons)
+        region = pick_region(mons, mon_index)
         log("connect %s" % peer)
         try:
             while ws.open:
@@ -289,8 +314,12 @@ class Handler(socketserver.StreamRequestHandler):
                     if kind == "auth" and self.pin_ok(msg.get("pin")):
                         authed = True
                         vx, vy, vw, vh = backend.refresh_metrics()
+                        mons = backend.monitors()
+                        mon_index = default_monitor(mons)
+                        region = pick_region(mons, mon_index)
                         ws.send({"t": "ready", "host": socket.gethostname(),
-                                 "screen": {"w": vw, "h": vh}, "backend": backend.name})
+                                 "screen": {"w": vw, "h": vh}, "backend": backend.name,
+                                 "monitors": mons, "monitor": mon_index})
                         log("authorised %s" % peer)
                     else:
                         time.sleep(0.6)
@@ -303,15 +332,26 @@ class Handler(socketserver.StreamRequestHandler):
                     ws.send({"t": "pong", "id": msg.get("id")})
                     continue
 
+                if kind == "monitor":
+                    mons = backend.monitors()
+                    try:
+                        mon_index = int(msg.get("i", -1))
+                    except (TypeError, ValueError):
+                        mon_index = -1
+                    region = pick_region(mons, mon_index)
+                    shot_hashes = {}
+                    ws.send({"t": "monitor", "i": mon_index, "monitors": mons})
+                    continue
+
                 if kind == "frame":
                     try:
-                        width = max(320, min(1600, int(msg.get("w", 960))))
+                        width = max(320, min(2560, int(msg.get("w", 960))))
                     except (TypeError, ValueError):
                         width = 960
                     if msg.get("full"):
                         shot_hashes = {}
                     with CAPTURE_LOCK:
-                        fw, fh, rgb = backend.grab(width)
+                        fw, fh, rgb = backend.grab(width, region)
                     tiles, shot_hashes = tile_frame(shot_hashes, fw, fh, rgb)
                     sent = 0
                     for tx, ty, tw, th, png in tiles:
@@ -325,7 +365,7 @@ class Handler(socketserver.StreamRequestHandler):
                     if kind == "rel":
                         backend.move_relative(msg.get("dx", 0), msg.get("dy", 0))
                     elif kind == "abs":
-                        backend.move_absolute(float(msg.get("x", 0)), float(msg.get("y", 0)))
+                        backend.move_absolute(float(msg.get("x", 0)), float(msg.get("y", 0)), region)
                     elif kind == "btn":
                         which, state = msg.get("b", "left"), msg.get("s", "click")
                         backend.button(which, state)
@@ -373,7 +413,12 @@ def main() -> int:
     print()
     print("  without the PIN :  %s   (PIN: %s)" % (base, pin))
     print("  input backend   :  %s" % backend.name)
-    print("  virtual screen  :  %d x %d" % (vw, vh))
+    mons = backend.monitors()
+    for i, m in enumerate(mons):
+        print("  monitor %d       :  %d x %d%s" %
+              (i + 1, m["w"], m["h"], "  (primary)" if m.get("primary") else ""))
+    if len(mons) > 1:
+        print("  virtual screen  :  %d x %d  (all monitors)" % (vw, vh))
     print(bar)
     print("  Keep this window open. Ctrl+C to stop.")
     print(bar, flush=True)

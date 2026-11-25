@@ -147,13 +147,17 @@
 
   <div class="setting-group">
     <h3>画面</h3>
+    <div class="setting row-only" id="monitor-row" hidden>
+      <span>表示する画面</span>
+      <div class="seg-mini" id="set-monitor"></div>
+    </div>
     <div class="setting row-only">
       <span>解像度</span>
       <div class="seg-mini" id="set-shotWidth">
-        <button class="chip" data-w="720">720</button>
+        <button class="chip" data-w="0">自動</button>
         <button class="chip" data-w="1024">1024</button>
-        <button class="chip" data-w="1280">1280</button>
-        <button class="chip" data-w="1600">1600</button>
+        <button class="chip" data-w="1440">1440</button>
+        <button class="chip" data-w="1920">1920</button>
       </div>
     </div>
   </div>
@@ -183,6 +187,7 @@
 
 <div class="imm-bar" id="imm-bar" hidden>
   <span class="stats" id="stats"></span>
+  <button class="imm-chip" id="imm-mon" hidden>画面1</button>
   <button class="imm-chip" id="imm-rotate">回転</button>
   <button class="imm-chip" id="imm-live">ライブ</button>
   <button class="imm-chip" id="imm-kb">キーボード</button>
