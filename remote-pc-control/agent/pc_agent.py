@@ -166,31 +166,55 @@ class WebSocket:
 TILE = 128
 
 
-def tile_frame(previous, width, height, rgb, tile=TILE, level=4):
+def bgra_to_rgb(chunk: bytes) -> bytes:
+    rgb = bytearray(len(chunk) // 4 * 3)
+    rgb[0::3] = chunk[2::4]
+    rgb[1::3] = chunk[1::4]
+    rgb[2::3] = chunk[0::4]
+    return bytes(rgb)
+
+
+def tile_frame(previous, width, height, buf, px, encode, tile=TILE):
     """Cut a frame into tiles and encode only the ones that changed.
 
-    Returns (tiles, hashes) where each tile is (x, y, w, h, png_bytes).
-    Pass an empty dict as `previous` to force a full frame.
+    `px` is the bytes per pixel in `buf`; `encode(chunk, w, h)` returns
+    (bytes, format). Hashing runs over the raw buffer, so nothing is
+    converted for the tiles that did not move. Pass an empty dict as
+    `previous` to force a full frame.
     """
-    stride = width * 3
-    tiles, hashes = [], {}
+    stride = width * px
+    changed, hashes = [], {}
     for ty in range(0, height, tile):
         th = min(tile, height - ty)
         for tx in range(0, width, tile):
             tw = min(tile, width - tx)
-            start = ty * stride + tx * 3
-            span = tw * 3
+            start = ty * stride + tx * px
+            span = tw * px
             if tw == width:                       # whole rows, no stitching needed
-                chunk = rgb[start:start + th * stride]
+                chunk = buf[start:start + th * stride]
             else:
-                chunk = b"".join(rgb[start + i * stride:start + i * stride + span]
+                chunk = b"".join(buf[start + i * stride:start + i * stride + span]
                                  for i in range(th))
             key = (tx, ty)
             digest = zlib.crc32(chunk)
             hashes[key] = digest
             if previous.get(key) != digest:
-                tiles.append((tx, ty, tw, th, png_encode(tw, th, chunk, level)))
-    return tiles, hashes
+                changed.append((tx, ty, tw, th, chunk))
+
+    tiles, fmt = [], "png"
+    for tx, ty, tw, th, chunk in changed:
+        data, fmt = encode(chunk, tw, th)
+        tiles.append((tx, ty, tw, th, data))
+    return tiles, hashes, fmt
+
+
+def make_encoder(backend, px, quality):
+    """JPEG through the Windows codec when possible, else the built in PNG."""
+    if px == 4 and getattr(backend, "jpeg", False):
+        return lambda chunk, w, h: backend.encode(chunk, w, h, quality)
+    if px == 4:
+        return lambda chunk, w, h: (png_encode(w, h, bgra_to_rgb(chunk), 4), "png")
+    return lambda chunk, w, h: (png_encode(w, h, chunk, 4), "png")
 
 
 # ------------------------------------------------------------------ server
@@ -252,6 +276,7 @@ class Handler(socketserver.StreamRequestHandler):
             body = json.dumps({"host": socket.gethostname(), "backend": self.server.backend.name,
                                "screen": {"w": vw, "h": vh},
                                "monitors": mons, "default_monitor": default_monitor(mons),
+                               "jpeg": bool(getattr(self.server.backend, "jpeg", False)),
                                "bpp": getattr(self.server.backend, "bits_per_pixel", 0)}).encode()
             return self.reply("200 OK", body, "application/json")
 
@@ -319,7 +344,8 @@ class Handler(socketserver.StreamRequestHandler):
                         region = pick_region(mons, mon_index)
                         ws.send({"t": "ready", "host": socket.gethostname(),
                                  "screen": {"w": vw, "h": vh}, "backend": backend.name,
-                                 "monitors": mons, "monitor": mon_index})
+                                 "monitors": mons, "monitor": mon_index,
+                                 "jpeg": bool(getattr(backend, "jpeg", False))})
                         log("authorised %s" % peer)
                     else:
                         time.sleep(0.6)
@@ -348,17 +374,31 @@ class Handler(socketserver.StreamRequestHandler):
                         width = max(320, min(2560, int(msg.get("w", 960))))
                     except (TypeError, ValueError):
                         width = 960
+                    try:
+                        quality = max(30, min(95, int(msg.get("q", 78))))
+                    except (TypeError, ValueError):
+                        quality = 78
                     if msg.get("full"):
                         shot_hashes = {}
+                    began = time.time()
                     with CAPTURE_LOCK:
-                        fw, fh, rgb = backend.grab(width, region)
-                    tiles, shot_hashes = tile_frame(shot_hashes, fw, fh, rgb)
+                        if hasattr(backend, "grab_bgra"):
+                            fw, fh, buf, px = backend.grab_bgra(width, region) + (4,)
+                        else:
+                            fw, fh, buf, px = backend.grab(width, region) + (3,)
+                    # bigger tiles at high resolution: fewer encoder calls, and
+                    # the codec compresses a larger area better
+                    tile = TILE if fw <= 1280 else 192
+                    tiles, shot_hashes, fmt = tile_frame(
+                        shot_hashes, fw, fh, buf, px,
+                        make_encoder(backend, px, quality), tile)
                     sent = 0
-                    for tx, ty, tw, th, png in tiles:
-                        ws.send_bytes(struct.pack(">HHHH", tx, ty, tw, th) + png)
-                        sent += len(png)
+                    for tx, ty, tw, th, data in tiles:
+                        ws.send_bytes(struct.pack(">HHHH", tx, ty, tw, th) + data)
+                        sent += len(data)
                     ws.send({"t": "frame_end", "w": fw, "h": fh, "n": len(tiles),
-                             "bytes": sent, "full": bool(msg.get("full"))})
+                             "bytes": sent, "full": bool(msg.get("full")), "fmt": fmt,
+                             "ms": int((time.time() - began) * 1000)})
                     continue
 
                 with LOCK:

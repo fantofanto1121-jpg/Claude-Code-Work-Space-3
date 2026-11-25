@@ -20,6 +20,7 @@
     tapClick: true,   // a tap on the pad clicks
     shotWidth: 0,     // capture width in pixels, 0 picks it from the device
     monitor: -2,      // -2 follows the agent, -1 is every monitor, else an index
+    quality: 78,      // jpeg quality for the screen view
     compact: false,   // hide the click row and scroll strip
     rotate: false,    // turn the capture 90 degrees to fill a portrait screen
     ovW: 44,          // overlay pad width, in vmin
@@ -311,17 +312,40 @@
   strip.addEventListener('pointercancel', stripEnd);
 
   /* ----------------------------------------------------------- screen */
-  function shotWidth() {
-    if (S.shotWidth > 0) return Math.max(480, Math.min(2560, Math.round(S.shotWidth)));
-    // match the device's real pixels, so nothing is upscaled on a retina screen
+  /* in automatic mode the width follows what the PC can actually keep up with */
+  const AUTO_STEPS = [640, 768, 1024, 1280, 1440, 1920];
+  let autoW = 0, slowRun = 0, fastRun = 0;
+
+  function deviceTarget() {
     const px = Math.max(window.innerWidth, window.innerHeight) * (window.devicePixelRatio || 1);
     return Math.max(640, Math.min(1920, Math.round(px)));
+  }
+
+  function shotWidth() {
+    if (S.shotWidth > 0) return Math.max(480, Math.min(2560, Math.round(S.shotWidth)));
+    if (!autoW) {
+      const target = deviceTarget();
+      autoW = AUTO_STEPS.filter((w) => w <= target).pop() || AUTO_STEPS[0];
+    }
+    return autoW;
+  }
+
+  function adapt(ms) {
+    if (S.shotWidth > 0 || typeof ms !== 'number') return;
+    const at = AUTO_STEPS.indexOf(autoW);
+    if (at < 0) return;
+    if (ms > 130) { slowRun++; fastRun = 0; } else if (ms < 45) { fastRun++; slowRun = 0; }
+    else { slowRun = 0; fastRun = 0; }
+    if (slowRun >= 2 && at > 0) { autoW = AUTO_STEPS[at - 1]; slowRun = 0; requestFrame(true); }
+    else if (fastRun >= 8 && at < AUTO_STEPS.length - 1 && AUTO_STEPS[at + 1] <= deviceTarget()) {
+      autoW = AUTO_STEPS[at + 1]; fastRun = 0; requestFrame(true);
+    }
   }
 
   function requestFrame(full) {
     if (!ready || views.screen.hidden) { awaiting = false; return; }
     awaiting = true;
-    send({ t: 'frame', w: shotWidth(), full: !!full });
+    send({ t: 'frame', w: shotWidth(), q: S.quality, full: !!full });
   }
 
   async function drawFrame(m) {
@@ -337,11 +361,12 @@
       resized = true;
     }
 
+    const type = m.fmt === 'jpeg' ? 'image/jpeg' : 'image/png';
     for (const buf of items) {
       const head = new DataView(buf);
       const x = head.getUint16(0), y = head.getUint16(2);
       try {
-        const blob = new Blob([new Uint8Array(buf, 8)], { type: 'image/png' });
+        const blob = new Blob([new Uint8Array(buf, 8)], { type: type });
         const bmp = await createImageBitmap(blob);
         ctx2d.drawImage(bmp, x, y);
         if (bmp.close) bmp.close();
@@ -361,12 +386,14 @@
       const fps = span > 0 ? (frameTimes.length - 1) / span : 0;
       const kbs = bytesAcc / ((now - statsAt) / 1000) / 1024;
       statsEl.textContent = streaming
-        ? fps.toFixed(0) + ' fps · ' + kbs.toFixed(0) + ' KB/s · ' + m.w + '×' + m.h
+        ? fps.toFixed(0) + ' fps · ' + kbs.toFixed(0) + ' KB/s · ' + m.w + '×' + m.h +
+          (typeof m.ms === 'number' ? ' · ' + m.ms + ' ms' : '')
         : m.w + '×' + m.h + ' · ' + Math.round((m.bytes || 0) / 1024) + ' KB';
       bytesAcc = 0; statsAt = now;
     }
 
     // resizing cleared the canvas, so a partial frame has to be re-asked in full
+    adapt(m.ms);
     if (resized && !m.full) { requestFrame(true); return; }
     if (streaming) setTimeout(() => requestFrame(false), 40);
   }
@@ -735,6 +762,9 @@
     $('set-shotWidth').querySelectorAll('button').forEach((b) => {
       b.setAttribute('aria-pressed', String(Number(b.dataset.w) === S.shotWidth));
     });
+    $('set-quality').querySelectorAll('button').forEach((b) => {
+      b.setAttribute('aria-pressed', String(Number(b.dataset.q) === S.quality));
+    });
     renderMonitors();
   }
 
@@ -756,10 +786,19 @@
     });
   });
 
+  $('set-quality').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-q]');
+    if (!b) return;
+    S.quality = Number(b.dataset.q);
+    saveSettings(); applySettings(); buzz(8);
+    if (!views.screen.hidden) requestFrame(true);
+  });
+
   $('set-shotWidth').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-w]');
     if (!b) return;
     S.shotWidth = Number(b.dataset.w);
+    autoW = 0; slowRun = 0; fastRun = 0;
     saveSettings(); applySettings(); buzz(8);
     if (!views.screen.hidden) requestFrame(true);
   });

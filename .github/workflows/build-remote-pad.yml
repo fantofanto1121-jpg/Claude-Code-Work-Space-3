@@ -57,6 +57,10 @@ jobs:
               Write-Host "monitor: $($m.w)x$($m.h) at $($m.x),$($m.y) primary=$($m.primary)"
             }
             if ($info.default_monitor -lt 0) { throw "no primary monitor was picked" }
+            if (-not $info.jpeg) {
+              throw "the GDI+ jpeg encoder did not come up; the screen view would fall back to PNG"
+            }
+            Write-Host "jpeg encoder: available"
 
             $page = Invoke-WebRequest 'http://127.0.0.1:8791/' -UseBasicParsing
             if ($page.StatusCode -ne 200) { throw "the UI was not served" }
@@ -145,6 +149,12 @@ jobs:
             Write-Host "websocket stream: $chunks chunks, $bytes bytes"
 
             $frame = $m.text | ConvertFrom-Json
+            if ($frame.fmt -ne 'jpeg') { throw "tiles came back as $($frame.fmt), not jpeg" }
+            $png = (Get-Item shot.png).Length
+            Write-Host ("full frame: {0} KB as jpeg in {1} ms (the same view is {2} KB as png)" -f `
+                        [math]::Round($frame.bytes / 1024), $frame.ms, [math]::Round($png / 1024))
+            if ($frame.bytes -ge $png) { throw "jpeg ($($frame.bytes)) is not smaller than png ($png)" }
+
             $want = [math]::Round($primary.w / $primary.h, 2)
             $got = [math]::Round($frame.w / $frame.h, 2)
             if ([math]::Abs($want - $got) -gt 0.02) {

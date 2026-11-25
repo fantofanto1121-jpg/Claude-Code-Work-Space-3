@@ -213,6 +213,107 @@ else:
     gdi32.DeleteObject.argtypes = (ctypes.c_void_p,)
     gdi32.DeleteDC.argtypes = (ctypes.c_void_p,)
 
+    gdiplus = ctypes.WinDLL("gdiplus")
+    ole32 = ctypes.WinDLL("ole32")
+    kernel32 = ctypes.WinDLL("kernel32")
+
+    class GUID(ctypes.Structure):
+        _fields_ = [("Data1", ctypes.c_uint32), ("Data2", ctypes.c_uint16),
+                    ("Data3", ctypes.c_uint16), ("Data4", ctypes.c_ubyte * 8)]
+
+    class GdiplusStartupInput(ctypes.Structure):
+        _fields_ = [("GdiplusVersion", ctypes.c_uint32), ("DebugEventCallback", ctypes.c_void_p),
+                    ("SuppressBackgroundThread", ctypes.c_int), ("SuppressExternalCodecs", ctypes.c_int)]
+
+    class EncoderParameter(ctypes.Structure):
+        _fields_ = [("Guid", GUID), ("NumberOfValues", ctypes.c_uint32),
+                    ("Type", ctypes.c_uint32), ("Value", ctypes.c_void_p)]
+
+    class EncoderParameters(ctypes.Structure):
+        _fields_ = [("Count", ctypes.c_uint32), ("Parameter", EncoderParameter * 1)]
+
+    PIXEL_FORMAT_32BPP_RGB = 0x22009
+    ENCODER_VALUE_LONG = 4
+    STREAM_SEEK_END = 2
+
+    ole32.CLSIDFromString.argtypes = (wt.LPCWSTR, ctypes.POINTER(GUID))
+    kernel32.GlobalLock.argtypes = (ctypes.c_void_p,)
+    kernel32.GlobalLock.restype = ctypes.c_void_p
+    kernel32.GlobalUnlock.argtypes = (ctypes.c_void_p,)
+    gdiplus.GdipCreateBitmapFromScan0.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                                  ctypes.c_int, ctypes.c_void_p,
+                                                  ctypes.POINTER(ctypes.c_void_p))
+    gdiplus.GdipSaveImageToStream.argtypes = (ctypes.c_void_p, ctypes.c_void_p,
+                                              ctypes.POINTER(GUID),
+                                              ctypes.POINTER(EncoderParameters))
+    gdiplus.GdipDisposeImage.argtypes = (ctypes.c_void_p,)
+    ole32.CreateStreamOnHGlobal.argtypes = (ctypes.c_void_p, wt.BOOL,
+                                            ctypes.POINTER(ctypes.c_void_p))
+    ole32.GetHGlobalFromStream.argtypes = (ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p))
+
+    def _guid(text: str) -> GUID:
+        g = GUID()
+        ole32.CLSIDFromString(text, ctypes.byref(g))
+        return g
+
+    JPEG_CLSID = _guid("{557CF401-1A04-11D3-9A73-0000F81EF32E}")
+    ENCODER_QUALITY = _guid("{1D5BE4B5-FA4A-452D-9CDD-5DB35105E7EB}")
+    _GDIPLUS_TOKEN = ctypes.c_void_p()
+
+    def _com_call(obj, index, restype, *argtypes):
+        vtbl = ctypes.cast(obj, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)))[0]
+        return ctypes.WINFUNCTYPE(restype, ctypes.c_void_p, *argtypes)(vtbl[index])
+
+    def _gdiplus_ready() -> bool:
+        if _GDIPLUS_TOKEN.value:
+            return True
+        start = GdiplusStartupInput(1, None, 0, 0)
+        if gdiplus.GdiplusStartup(ctypes.byref(_GDIPLUS_TOKEN), ctypes.byref(start), None) != 0:
+            return False
+        return bool(_GDIPLUS_TOKEN.value)
+
+    def jpeg_encode(bgra: bytes, width: int, height: int, quality: int = 80) -> bytes:
+        """Encode BGRX pixels as JPEG with the codec Windows already ships."""
+        if not _gdiplus_ready():
+            raise OSError("GDI+ is not available")
+        scan0 = (ctypes.c_char * len(bgra)).from_buffer_copy(bgra)
+        bitmap = ctypes.c_void_p()
+        if gdiplus.GdipCreateBitmapFromScan0(width, height, width * 4,
+                                             PIXEL_FORMAT_32BPP_RGB, scan0,
+                                             ctypes.byref(bitmap)) != 0:
+            raise OSError("GdipCreateBitmapFromScan0 failed")
+        stream = ctypes.c_void_p()
+        if ole32.CreateStreamOnHGlobal(None, True, ctypes.byref(stream)) != 0:
+            gdiplus.GdipDisposeImage(bitmap)
+            raise OSError("CreateStreamOnHGlobal failed")
+        try:
+            value = ctypes.c_long(max(1, min(100, int(quality))))
+            params = EncoderParameters()
+            params.Count = 1
+            params.Parameter[0].Guid = ENCODER_QUALITY
+            params.Parameter[0].NumberOfValues = 1
+            params.Parameter[0].Type = ENCODER_VALUE_LONG
+            params.Parameter[0].Value = ctypes.cast(ctypes.byref(value), ctypes.c_void_p)
+            if gdiplus.GdipSaveImageToStream(bitmap, stream, ctypes.byref(JPEG_CLSID),
+                                             ctypes.byref(params)) != 0:
+                raise OSError("GdipSaveImageToStream failed")
+
+            seek = _com_call(stream, 5, ctypes.c_long, ctypes.c_longlong, ctypes.c_ulong,
+                             ctypes.POINTER(ctypes.c_ulonglong))
+            size = ctypes.c_ulonglong()
+            seek(stream, 0, STREAM_SEEK_END, ctypes.byref(size))
+
+            handle = ctypes.c_void_p()
+            ole32.GetHGlobalFromStream(stream, ctypes.byref(handle))
+            ptr = kernel32.GlobalLock(handle)
+            try:
+                return ctypes.string_at(ptr, int(size.value))
+            finally:
+                kernel32.GlobalUnlock(handle)
+        finally:
+            _com_call(stream, 2, ctypes.c_ulong)(stream)      # IUnknown::Release
+            gdiplus.GdipDisposeImage(bitmap)
+
     def _dpi_aware() -> None:
         try:
             ctypes.WinDLL("shcore").SetProcessDpiAwareness(2)
@@ -229,6 +330,14 @@ else:
             _dpi_aware()
             self.refresh_metrics()
             self.bits_per_pixel = self._probe_depth()
+            self.jpeg = self._probe_jpeg()
+
+        @staticmethod
+        def _probe_jpeg() -> bool:
+            try:
+                return len(jpeg_encode(b"\x40\x50\x60\x00" * 64, 8, 8, 70)) > 100
+            except Exception:
+                return False
 
         @staticmethod
         def _probe_depth() -> int:
@@ -350,6 +459,17 @@ else:
 
         # -- capture ----------------------------------------------------
         def grab(self, max_width=1024, region=None):
+            w, h, bgra = self.grab_bgra(max_width, region)
+            rgb = bytearray(w * h * 3)
+            rgb[0::3] = bgra[2::4]
+            rgb[1::3] = bgra[1::4]
+            rgb[2::3] = bgra[0::4]
+            return w, h, bytes(rgb)
+
+        def encode(self, bgra, width, height, quality=80):
+            return jpeg_encode(bgra, width, height, quality), "jpeg"
+
+        def grab_bgra(self, max_width=1024, region=None):
             vx, vy, vw, vh = self.refresh_metrics()
             rx, ry, rw, rh = region or (vx, vy, vw, vh)
             rw, rh = max(2, rw), max(2, rh)
@@ -387,11 +507,7 @@ else:
                 gdi32.DeleteDC(mem)
                 user32.ReleaseDC(None, screen)
 
-            rgb = bytearray(out_w * out_h * 3)
-            rgb[0::3] = bgra[2::4]
-            rgb[1::3] = bgra[1::4]
-            rgb[2::3] = bgra[0::4]
-            return out_w, out_h, bytes(rgb)
+            return out_w, out_h, bgra
 
         def capture(self, max_width=1024, region=None):
             w, h, rgb = self.grab(max_width, region)
